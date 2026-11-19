@@ -24,6 +24,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -41,6 +42,7 @@ import com.ak.vodcalendar.core.model.AppSettings
 import com.ak.vodcalendar.core.model.ContentFilter
 import com.ak.vodcalendar.core.model.MovieReleaseKind
 import com.ak.vodcalendar.core.model.StreamingCatalog
+import com.ak.vodcalendar.launch.ContentLauncher
 import com.ak.vodcalendar.ui.common.InfoMessage
 import com.ak.vodcalendar.ui.common.SectionHeader
 import java.util.Locale
@@ -130,22 +132,32 @@ private fun LazyListScope.alternativePlayer(settings: AppSettings, viewModel: Se
     item {
         SectionHeader(
             "Player alternativ implicit",
-            "Folosit la „Deschide cu…”, mai ales când nu ai aplicația oficială. Lansarea efectivă vine în etapa 4.",
+            "Apare ca buton în detaliile episodului și ale filmului, primul când titlul nu e pe aplicațiile tale. " +
+                "„Deschide cu…” le arată mereu pe toate.",
         )
     }
     item(key = "player-none") {
         ListItem(
             selected = settings.alternativePlayerId == null,
             onClick = { viewModel.selectAlternativePlayer(null) },
-            headlineContent = { Text("Întreabă de fiecare dată") },
+            headlineContent = { Text("Fără implicit (aleg din „Deschide cu…”)") },
             trailingContent = { if (settings.alternativePlayerId == null) Text("●") },
         )
     }
     items(AlternativePlayers.all, key = { "player-${it.id}" }) { player ->
+        val context = LocalContext.current
+        val installed = remember(player.id) {
+            val launcher = ContentLauncher(context)
+            player.packages.isEmpty() && player.launcherNames.isEmpty() ||
+                launcher.installedPackage(player.packages, player.launcherNames) != null
+        }
         ListItem(
             selected = settings.alternativePlayerId == player.id,
             onClick = { viewModel.selectAlternativePlayer(player.id) },
             headlineContent = { Text(player.name) },
+            supportingContent = {
+                Text((if (installed) "" else "Nu e instalat pe TV. ") + player.note)
+            },
             trailingContent = { if (settings.alternativePlayerId == player.id) Text("●") },
         )
     }

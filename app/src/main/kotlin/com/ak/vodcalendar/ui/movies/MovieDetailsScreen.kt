@@ -24,12 +24,15 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
-import androidx.tv.material3.Button
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.OutlinedButton
 import androidx.tv.material3.Text
 import coil3.compose.AsyncImage
+import com.ak.vodcalendar.AppContainer
+import com.ak.vodcalendar.core.launch.toContentRef
+import com.ak.vodcalendar.core.model.AppSettings
+import com.ak.vodcalendar.ui.launch.WatchSection
 import com.ak.vodcalendar.core.model.MovieEntry
 import com.ak.vodcalendar.core.model.Region
 import com.ak.vodcalendar.ui.common.dayLabel
@@ -42,7 +45,7 @@ import com.ak.vodcalendar.ui.common.movieWhere
 
 /**
  * Movie details: every known release (cinema US/RO, digital, streaming), ratings
- * and where it streams. "Open in app" / "Open with…" arrive in stage 4.
+ * and where it streams, with "open in app" and "Deschide cu…".
  */
 @Composable
 fun MovieDetailsScreen(
@@ -51,6 +54,8 @@ fun MovieDetailsScreen(
     onToggleFollow: () -> Unit,
     onHide: () -> Unit,
     onBack: () -> Unit,
+    settings: AppSettings,
+    container: AppContainer,
 ) {
     val firstButton = remember { FocusRequester() }
     LaunchedEffect(entry.key) { runCatching { firstButton.requestFocus() } }
@@ -106,21 +111,26 @@ fun MovieDetailsScreen(
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
+                        WatchSection(
+                            ref = entry.toContentRef(),
+                            wikidataId = entry.wikidataId,
+                            availability = entry.availability,
+                            preferred = entry.watchOn,
+                            missingService = entry.service.takeIf { entry.watchOn == null },
+                            settings = settings,
+                            container = container,
+                            firstFocus = firstButton,
+                        )
                         Row(
                             horizontalArrangement = Arrangement.spacedBy(12.dp),
-                            modifier = Modifier.padding(top = 12.dp),
+                            modifier = Modifier.padding(top = 4.dp),
                         ) {
-                            Button(onClick = onToggleFollow, modifier = Modifier.focusRequester(firstButton)) {
+                            OutlinedButton(onClick = onToggleFollow) {
                                 Text(if (isFollowed) "Nu mai urmări" else "Urmăresc filmul")
                             }
                             OutlinedButton(onClick = onHide) { Text("Ascunde filmul") }
                             OutlinedButton(onClick = onBack) { Text("Înapoi") }
                         }
-                        Text(
-                            text = "Deschiderea direct în aplicație și „Deschide cu…” vin în etapa 4.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
                     }
                 }
             }

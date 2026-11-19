@@ -232,6 +232,7 @@ class MovieCalendarRepository(
                 isFollowed = followed,
                 verdict = verdict,
                 popularity = details.popularity,
+                wikidataId = details.externalIds?.wikidataId?.takeIf { it.isNotBlank() },
             )
         }
     }

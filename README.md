@@ -7,7 +7,7 @@ pe aplicațiile de streaming pe care le ai, cu ora României.
 
 | Modul | Ce conține |
 |---|---|
-| `core` | Kotlin pur (fără Android): modele, clienți TMDB și OMDb, calculul orei de lansare, filtre de conținut, regulile de calitate, listele de seriale și filme anticipate, repository-urile de calendar (seriale și filme). Are teste unitare. |
+| `core` | Kotlin pur (fără Android): modele, clienți TMDB, OMDb și Wikidata, planul de deschidere (linkuri către aplicații și playere), calculul orei de lansare, filtre de conținut, regulile de calitate, listele de seriale și filme anticipate, repository-urile de calendar (seriale și filme). Are teste unitare. |
 | `app` | Aplicația Android TV: calendarul de seriale și cel de filme (zi/săptămână), detaliile episodului și ale filmului, Setări, DataStore pentru setări, legarea dependențelor. |
 
 ## Cheia TMDB
@@ -34,7 +34,7 @@ răspunsurile se țin în cache 24 de ore). Se pune la fel ca cheia TMDB: în **
   - categoriile ascunse (anime, turcești, indiene, coreene, chinezești, telenovele, soap, reality, talk show, știri, documentare, copii, animație) nu apar deloc.
 - **„Doar aplicațiile mele”** lasă doar episoadele de pe aplicațiile bifate în Setări.
 - **„Arată și ce nu trece pragurile”** afișează estompat ce a fost filtrat și de ce, ca să poți regla pragurile.
-- **Detalii episod**: descriere, notă IMDb/TMDB, rețea, unde e disponibil în RO și US, „Urmăresc serialul” și „Ascunde serialul”. Deschiderea în aplicație vine în etapa 4.
+- **Detalii episod**: descriere, notă IMDb/TMDB, rețea, unde e disponibil în RO și US, „Urmăresc serialul”, „Ascunde serialul”, plus butoanele de deschidere (vezi mai jos).
 
 ### Lista „mult așteptate”
 
@@ -61,7 +61,42 @@ Cum se decide dacă o lansare digitală e streaming: TMDB pune la data digitală
 - categoriile ascunse se aplică și filmelor (anime, indiene, turcești etc.), plus **Filme TV** (filmele făcute pentru televiziune), ascunse implicit;
 - **„Streaming doar pe aplicațiile mele”** lasă doar premierele de streaming de pe aplicațiile tale; cinema și digital rămân.
 
-**Detalii film**: descriere, note, toate lansările (cinema SUA/RO, digital, streaming), unde e disponibil acum în RO și US, „Urmăresc filmul” și „Ascunde filmul”.
+**Detalii film**: descriere, note, toate lansările (cinema SUA/RO, digital, streaming), unde e disponibil acum în RO și US, „Urmăresc filmul”, „Ascunde filmul”, plus butoanele de deschidere (vezi mai jos).
+
+## Deschide în aplicație și „Deschide cu…”
+
+În detaliile episodului și ale filmului:
+
+- **▶ Netflix / Max / …**: câte un buton pentru fiecare aplicație bifată în Setări care are titlul **în țara setată pentru ea** (după TMDB / JustWatch). Aplicația aleasă de calendar e prima.
+- **Playerul implicit** din Setări (DebridStream, Wuplay, Nuvio, Stremio). Dacă titlul nu e pe nicio aplicație de-a ta, el devine primul buton.
+- **Deschide cu…**: lista cu toate playerele alternative (cele instalate primele) plus „Caută în Google TV”, care arată pe ce aplicații e titlul și deschide direct acolo.
+
+După apăsare apare un mesaj care spune unde s-a ajuns: la episod, pe pagina titlului sau doar în aplicație (atunci cauți titlul).
+
+### Cum se ajunge la titlu în aplicațiile oficiale
+
+Serviciile nu publică id-urile episoadelor, deci **niciun link oficial nu duce direct la episod**; cel mai bun caz e pagina serialului sau a filmului. Id-ul titlului pe fiecare serviciu vine din **Wikidata** (TMDB dă id-ul Wikidata în `external_ids`), gratuit și fără cheie. Acoperirea e bună pentru titlurile populare, slabă pentru restul. Dacă nu există id sau linkul nu merge, se deschide aplicația.
+
+Aplicația e găsită după pachet (lista din `StreamingCatalog`) sau, dacă pachetul diferă, după numele afișat pe TV (de ex. „SkyShowtime”, „DebridStream”).
+
+### Ce e verificat și ce e best-effort
+
+| Aplicație | Ce face | Sursa / stare |
+|---|---|---|
+| **Stremio** (`com.stremio.one`) | episod: `stremio:///detail/series/{imdb}/{imdb}:{sezon}:{episod}`, film: `stremio:///detail/movie/{imdb}/{imdb}`; fără IMDb, căutare | **Verificat** în documentația Stremio (addon SDK, `docs/deep-links.md`). Netestat pe TV. |
+| **Nuvio** (`com.nuvio.tv`, `com.nuvio.app`) | pagina titlului: `nuvio://series/{imdb}`, `nuvio://movie/{imdb}`, altfel `nuvio://tmdb/tv/{tmdb}` | **Verificat** în codul Nuvio TV (`DeepLinkParser`). Nuvio nu primește episodul în link. |
+| **Wuplay** (`app.wuplay.androidtv`) | încearcă linkurile Stremio, apoi deschide aplicația | **Best-effort**: e un fork de Stremio, nu știm sigur dacă păstrează schema. |
+| **DebridStream** | deschide aplicația (găsită după nume) | **Best-effort**: nu are link public și nici pachet cunoscut. |
+| Orice aplicație compatibilă Stremio | trimite linkul Stremio fără pachet; Android întreabă cu ce aplicație | Best-effort |
+| Caută în Google TV | căutarea sistemului (`GLOBAL_SEARCH`) | Best-effort; merge pe Google TV, pe alte TV-uri poate lipsi |
+| **Netflix** | `https://www.netflix.com/title/{id}` (+ extra `source=30`), id Wikidata P1874 | Best-effort (format public, netestat pe TV) |
+| **Disney+** | `https://www.disneyplus.com/movies/x/{id}` sau `/series/x/{id}`, P7595 / P7596 | Best-effort |
+| **Prime Video** | `https://www.primevideo.com/detail/{id}`, P8055 | Best-effort |
+| **Apple TV+** | `https://tv.apple.com/movie/{id}` sau `/show/{id}`, P9586 / P9751 | Best-effort |
+| **Hulu** | `https://www.hulu.com/movie/{id}` sau `/series/{id}`, P6466 / P6465 | Best-effort |
+| Max, SkyShowtime, Paramount+, Peacock, Crunchyroll, Voyo | deschide aplicația | Fără link de titlu (formatul Max s-a schimbat de mai multe ori; celelalte n-au id-uri în Wikidata) |
+
+Deschiderea unei aplicații după pachet sau nume e sigură. Tot ce e „best-effort” trebuie confirmat pe TV-ul tău; dacă un link nu merge, se trece automat la pasul următor (pagina → aplicația).
 
 ## Build
 
@@ -94,5 +129,5 @@ Apoi contează aplicația ta și țara setată pentru ea (RO sau US):
 1. Schelet, setări, integrare TMDB ✅
 2. Calendarul de seriale cu filtre și praguri (IMDb prin OMDb, liste „mult așteptate”) ✅
 3. Filme: streaming, digital, cinema US/RO ✅
-4. Deep linkuri și „Deschide cu…” (DebridStream, Wuplay, Nuvio, Stremio)
+4. Deep linkuri și „Deschide cu…” (DebridStream, Wuplay, Nuvio, Stremio) ✅
 5. Sincronizare tracking (Simkl sau alt serviciu), notificări, canal pe ecranul Android TV
