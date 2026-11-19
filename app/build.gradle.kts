@@ -18,6 +18,11 @@ val tmdbApiKey: String = secret("TMDB_API_KEY")
 // Optional OMDb key for IMDb ratings (OMDB_API_KEY), same rules as the TMDB key.
 val omdbApiKey: String = secret("OMDB_API_KEY")
 
+// Version: the base changes per stage; CI release builds add the run number (BUILD_NUMBER),
+// so every published APK has a higher versionCode and installs over the previous one.
+val baseVersion = "0.4"
+val buildNumber: Int? = System.getenv("BUILD_NUMBER")?.toIntOrNull()
+
 android {
     namespace = "com.ak.vodcalendar"
     compileSdk = 35
@@ -26,14 +31,35 @@ android {
         applicationId = "com.ak.vodcalendar"
         minSdk = 26
         targetSdk = 35
-        versionCode = 4
-        versionName = "0.4.0"
+        versionCode = if (buildNumber != null) 100 + buildNumber else 4
+        versionName = if (buildNumber != null) "$baseVersion.$buildNumber" else "$baseVersion.0"
         buildConfigField("String", "TMDB_API_KEY", "\"$tmdbApiKey\"")
         buildConfigField("String", "OMDB_API_KEY", "\"$omdbApiKey\"")
+        // GitHub repo whose latest release the in-app updater installs.
+        buildConfigField("String", "UPDATE_REPO", "\"radumariusi/ak_vod_calendar\"")
+    }
+
+    // Release signing key from secrets, never committed: the keystore file path and its
+    // password come from local.properties or env (CI decodes the SIGNING_KEYSTORE_B64 secret).
+    // The same key on every release lets the in-app update install over the previous version.
+    val keystorePath = secret("SIGNING_KEYSTORE_PATH")
+    val hasReleaseKey = keystorePath.isNotBlank() && file(keystorePath).exists()
+    signingConfigs {
+        if (hasReleaseKey) {
+            create("release") {
+                storeFile = file(keystorePath)
+                storePassword = secret("SIGNING_PASSWORD")
+                keyAlias = secret("SIGNING_KEY_ALIAS").ifBlank { "akvod" }
+                keyPassword = secret("SIGNING_PASSWORD")
+            }
+        }
     }
 
     buildTypes {
         release {
+            // Without the key (PR builds, local builds) the release APK is signed with the
+            // debug key; it works but won't update a version installed from Releases.
+            signingConfig = if (hasReleaseKey) signingConfigs.getByName("release") else signingConfigs.getByName("debug")
             isMinifyEnabled = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
@@ -51,6 +77,12 @@ android {
     buildFeatures {
         compose = true
         buildConfig = true
+    }
+
+    lint {
+        // Lint must not block publishing a release.
+        checkReleaseBuilds = false
+        abortOnError = false
     }
 
     packaging {

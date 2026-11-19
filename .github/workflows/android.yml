@@ -4,12 +4,21 @@ on:
   pull_request:
   push:
     branches: [main]
-  # Manual run: builds the debug APK and attaches it to the run as an artifact.
+  # Manual run: builds the release APK and publishes it as the GitHub "Latest release",
+  # which the app's updater installs.
   workflow_dispatch:
+    inputs:
+      notes:
+        description: "Ce e nou (apare în release și în aplicație)"
+        required: false
+        default: ""
 
 concurrency:
   group: android-${{ github.ref }}
   cancel-in-progress: true
+
+permissions:
+  contents: write
 
 jobs:
   build:
@@ -35,10 +44,40 @@ jobs:
           OMDB_API_KEY: ${{ secrets.OMDB_API_KEY }}
         run: ./gradlew :app:assembleDebug --stacktrace
 
-      - name: Upload debug APK
+      # The release key lives only in repo secrets (SIGNING_KEYSTORE_B64, SIGNING_PASSWORD).
+      - name: Decode release key
         if: github.event_name == 'workflow_dispatch'
-        uses: actions/upload-artifact@v4
-        with:
-          name: ak-vod-calendar-debug
-          path: app/build/outputs/apk/debug/*.apk
-          retention-days: 14
+        env:
+          SIGNING_KEYSTORE_B64: ${{ secrets.SIGNING_KEYSTORE_B64 }}
+        run: |
+          if [ -z "$SIGNING_KEYSTORE_B64" ]; then
+            echo "::error::Lipsește secretul SIGNING_KEYSTORE_B64; fără el update-ul din aplicație nu s-ar putea instala."
+            exit 1
+          fi
+          echo "$SIGNING_KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/release.keystore"
+          echo "SIGNING_KEYSTORE_PATH=$RUNNER_TEMP/release.keystore" >> "$GITHUB_ENV"
+
+      # Also on PRs (debug-signed there), so a broken release build shows up before publishing.
+      - name: Build release APK
+        env:
+          BUILD_NUMBER: ${{ github.run_number }}
+          SIGNING_PASSWORD: ${{ secrets.SIGNING_PASSWORD }}
+          TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
+          OMDB_API_KEY: ${{ secrets.OMDB_API_KEY }}
+        run: ./gradlew :app:assembleRelease --stacktrace
+
+      - name: Publish GitHub release
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NOTES: ${{ inputs.notes }}
+        run: |
+          VERSION=$(grep -oP 'val baseVersion = "\K[^"]+' app/build.gradle.kts).${{ github.run_number }}
+          APK=ak-vod-calendar-$VERSION.apk
+          cp app/build/outputs/apk/release/app-release.apk "$APK"
+          BODY="${NOTES:-Build din ${GITHUB_SHA::7}}"
+          gh release create "v$VERSION" "$APK" \
+            --target "$GITHUB_SHA" \
+            --title "AK VOD Calendar $VERSION" \
+            --notes "$BODY" \
+            --latest

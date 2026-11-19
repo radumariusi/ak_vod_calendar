@@ -101,12 +101,36 @@ Deschiderea unei aplicații după pachet sau nume e sigură. Tot ce e „best-ef
 ## Build
 
 ```bash
-./gradlew :core:test          # teste
-./gradlew :app:assembleDebug  # APK debug în app/build/outputs/apk/debug/
+./gradlew :core:test            # teste
+./gradlew :app:assembleDebug    # APK debug în app/build/outputs/apk/debug/
+./gradlew :app:assembleRelease  # APK release în app/build/outputs/apk/release/
 ```
 
-În GitHub: **Actions → Android → Run workflow** construiește APK-ul debug și îl atașează la rulare.
-La fiecare PR se rulează testele și build-ul, fără să se publice APK-ul.
+La fiecare PR se rulează testele și build-ul (debug și release), fără să se publice nimic.
+
+## Release și actualizări
+
+**Publicare**: în GitHub, **Actions → Android → Run workflow** (opțional cu un text „Ce e nou”). Se construiește APK-ul
+release și se publică un GitHub Release `v0.4.N` (N = numărul rulării) cu fișierul `ak-vod-calendar-0.4.N.apk`, marcat
+**Latest**. Prima instalare: descarci APK-ul din pagina Releases (de ex. cu Downloader pe TV) și îl instalezi.
+
+**Update din aplicație**: la pornire aplicația verifică „Latest release”. Dacă e o versiune nouă, apare sus butonul
+**⬆ Actualizează la 0.4.N**; la fel în **Setări → Actualizări**, unde poți și căuta manual. Apăsarea descarcă APK-ul și
+deschide instalarea Android. Prima dată Android cere voie („Instalează aplicații necunoscute” pentru AK VOD Calendar);
+aplicația deschide singură ecranul.
+
+**Semnătura**: un update se instalează peste versiunea veche doar dacă e semnat cu aceeași cheie. Cheia de release nu e
+în repo; stă în secretele repo-ului:
+
+- `SIGNING_KEYSTORE_B64`: keystore-ul, în base64;
+- `SIGNING_PASSWORD`: parola (aceeași pentru keystore și cheie; aliasul e `akvod`, sau `SIGNING_KEY_ALIAS`).
+
+Fără ele, publicarea se oprește cu eroare. Local, aceleași valori se pun în `local.properties`
+(`SIGNING_KEYSTORE_PATH`, `SIGNING_PASSWORD`). APK-urile din etapele 1–4 (artefactele zip) au altă semnătură:
+dezinstalează-le o dată înainte de prima versiune din Releases.
+
+**Atenție la chei**: repo-ul e public, deci și APK-urile din Releases. Nu pune `TMDB_API_KEY` / `OMDB_API_KEY` ca secrete
+de repo (ar ajunge în APK-ul public); introdu cheile în aplicație, în Setări.
 
 ## Ora de lansare
 

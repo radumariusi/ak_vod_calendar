@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -40,6 +41,7 @@ import com.ak.vodcalendar.ui.details.EpisodeDetailsScreen
 import com.ak.vodcalendar.ui.movies.MovieCalendarScreen
 import com.ak.vodcalendar.ui.movies.MovieDetailsScreen
 import com.ak.vodcalendar.ui.settings.SettingsScreen
+import com.ak.vodcalendar.ui.update.UpdateBadge
 import kotlinx.coroutines.launch
 
 enum class Screen(val label: String) {
@@ -60,6 +62,9 @@ fun AppRoot(container: AppContainer) {
     fun updateSettings(transform: (AppSettings) -> AppSettings) {
         scope.launch { container.settingsRepository.update(transform) }
     }
+
+    // One quiet check per app start; the top bar shows a button when a new version exists.
+    LaunchedEffect(Unit) { container.updates.check(quiet = true) }
 
     BackHandler(enabled = openEntry != null || openMovie != null || screen != Screen.SERIES) {
         when {
@@ -124,6 +129,8 @@ fun AppRoot(container: AppContainer) {
                 Screen.entries.forEach { item ->
                     NavButton(label = item.label, selected = item == screen, onClick = { screen = item })
                 }
+                Spacer(Modifier.weight(1f))
+                UpdateBadge(container.updates)
             }
             Spacer(Modifier.padding(top = 16.dp))
             Box(modifier = Modifier.fillMaxSize()) {
