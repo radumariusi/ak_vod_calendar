@@ -11,6 +11,7 @@ import com.ak.vodcalendar.core.settings.SettingsRepository
 import com.ak.vodcalendar.core.tmdb.CachingTmdbApi
 import com.ak.vodcalendar.core.tmdb.TmdbHttpApi
 import com.ak.vodcalendar.data.DataStoreSettingsRepository
+import com.ak.vodcalendar.update.UpdateManager
 import okhttp3.OkHttpClient
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
@@ -41,6 +42,9 @@ class AppContainer(context: Context) {
         tmdbApis.getOrPut(key) { CachingTmdbApi(TmdbHttpApi(okHttp, key)) }
 
     val omdb = OmdbClient(okHttp)
+
+    /** In-app updates from the GitHub "Latest release". */
+    val updates = UpdateManager(context, okHttp)
 
     /** Netflix / Disney+ / Prime Video / Apple TV ids of a title, for "Deschide în …". */
     val streamingIds = WikidataClient(okHttp)

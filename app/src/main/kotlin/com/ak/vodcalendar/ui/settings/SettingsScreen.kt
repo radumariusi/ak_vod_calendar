@@ -43,6 +43,7 @@ import com.ak.vodcalendar.core.model.ContentFilter
 import com.ak.vodcalendar.core.model.MovieReleaseKind
 import com.ak.vodcalendar.core.model.StreamingCatalog
 import com.ak.vodcalendar.launch.ContentLauncher
+import com.ak.vodcalendar.ui.update.UpdateSettings
 import com.ak.vodcalendar.ui.common.InfoMessage
 import com.ak.vodcalendar.ui.common.SectionHeader
 import java.util.Locale
@@ -69,6 +70,8 @@ fun SettingsScreen(container: AppContainer) {
         verticalArrangement = Arrangement.spacedBy(6.dp),
         contentPadding = PaddingValues(bottom = 48.dp),
     ) {
+        item(key = "updates-header") { SectionHeader("Actualizări") }
+        item(key = "updates") { UpdateSettings(container.updates) }
         streamingApps(current, viewModel)
         alternativePlayer(current, viewModel)
         thresholds(current, viewModel)
