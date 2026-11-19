@@ -3,6 +3,7 @@ package com.ak.vodcalendar
 import android.app.Application
 import android.content.Context
 import com.ak.vodcalendar.core.calendar.EpisodeCalendarRepository
+import com.ak.vodcalendar.core.calendar.MovieCalendarRepository
 import com.ak.vodcalendar.core.model.AppSettings
 import com.ak.vodcalendar.core.omdb.OmdbClient
 import com.ak.vodcalendar.core.settings.SettingsRepository
@@ -41,6 +42,8 @@ class AppContainer(context: Context) {
     val omdb = OmdbClient(okHttp)
 
     val episodeCalendar = EpisodeCalendarRepository(apiFactory = ::tmdbApi, imdbRatings = omdb)
+
+    val movieCalendar = MovieCalendarRepository(apiFactory = ::tmdbApi, imdbRatings = omdb)
 
     /** "Reîncarcă" drops cached TMDB answers. */
     fun clearCaches() = tmdbApis.values.forEach { it.clear() }
