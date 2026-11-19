@@ -7,6 +7,9 @@ interface TmdbApi {
     /** Shows that have at least one episode airing between [from] and [to] (inclusive). */
     suspend fun discoverTvAiring(from: LocalDate, to: LocalDate, page: Int): PagedResponse<TvSummaryDto>
 
+    /** Shows whose first episode airs between [from] and [to], most popular first. */
+    suspend fun discoverTvPremieres(from: LocalDate, to: LocalDate, page: Int): PagedResponse<TvSummaryDto>
+
     /** Show details with `watch/providers` and `external_ids` appended. */
     suspend fun tvDetails(showId: Int): TvDetailsDto
 
@@ -26,4 +29,5 @@ object TmdbImages {
     fun poster(path: String?): String? = path?.let { BASE + "w342" + it }
     fun still(path: String?): String? = path?.let { BASE + "w300" + it }
     fun logo(path: String?): String? = path?.let { BASE + "w92" + it }
+    fun backdrop(path: String?): String? = path?.let { BASE + "w1280" + it }
 }

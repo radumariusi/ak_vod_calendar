@@ -1,13 +1,22 @@
 package com.ak.vodcalendar.core.calendar
 
+import com.ak.vodcalendar.core.anticipated.AnticipatedShowsSource
+import com.ak.vodcalendar.core.anticipated.TmdbAnticipatedSource
 import com.ak.vodcalendar.core.filter.ContentClassifier
 import com.ak.vodcalendar.core.model.AppSettings
+import com.ak.vodcalendar.core.model.CalendarResult
 import com.ak.vodcalendar.core.model.ContentFilter
 import com.ak.vodcalendar.core.model.EpisodeEntry
+import com.ak.vodcalendar.core.model.ImdbRating
 import com.ak.vodcalendar.core.model.ProviderAvailability
 import com.ak.vodcalendar.core.model.Region
 import com.ak.vodcalendar.core.model.StreamingApp
+import com.ak.vodcalendar.core.omdb.ImdbRatings
+import com.ak.vodcalendar.core.quality.QualityGate
+import com.ak.vodcalendar.core.quality.QualityInput
+import com.ak.vodcalendar.core.quality.QualityVerdict
 import com.ak.vodcalendar.core.time.ReleaseTimeResolver
+import com.ak.vodcalendar.core.time.RomaniaTime
 import com.ak.vodcalendar.core.tmdb.EpisodeDto
 import com.ak.vodcalendar.core.tmdb.TmdbApi
 import com.ak.vodcalendar.core.tmdb.TmdbException
@@ -23,24 +32,30 @@ import kotlinx.coroutines.sync.withPermit
 import java.time.LocalDate
 import java.time.ZonedDateTime
 import java.time.format.DateTimeParseException
+import java.time.temporal.ChronoUnit
 
 /**
  * Builds the series calendar from TMDB.
  *
  * 1. `discover/tv` with `air_date` filters finds shows with an episode in the window.
- * 2. Hidden categories (anime, Turkish, …) are dropped before any extra request.
+ * 2. Hidden categories (anime, Turkish, …) and shows the user hid are dropped
+ *    before any extra request.
  * 3. For each show: details + watch providers, then the seasons of the last/next
- *    episode to get every episode in the window.
+ *    episode to get every episode in the window, plus the IMDb rating (OMDb).
  * 4. Each episode gets the user's matching app (and its RO/US region) and a release
- *    moment in Romania time.
- *
- * Quality thresholds and anticipated lists are applied in stage 2.
+ *    moment in Romania time that depends on that app and region.
+ * 5. The quality gate keeps returning shows above the rating thresholds and new
+ *    shows from the anticipated list.
  */
 class EpisodeCalendarRepository(
     private val apiFactory: (apiKey: String) -> TmdbApi,
+    private val imdbRatings: ImdbRatings? = null,
+    private val anticipatedSource: AnticipatedShowsSource = TmdbAnticipatedSource(),
     private val resolver: ReleaseTimeResolver = ReleaseTimeResolver(),
-    private val maxDiscoverPages: Int = 5,
+    private val maxDiscoverPagesPerDay: Int = 4,
+    private val maxDiscoverPages: Int = 15,
     private val concurrency: Int = 8,
+    private val today: () -> LocalDate = { RomaniaTime.today() },
 ) {
 
     suspend fun episodesBetween(
@@ -48,26 +63,49 @@ class EpisodeCalendarRepository(
         to: LocalDate,
         settings: AppSettings,
         apiKey: String,
-    ): List<EpisodeEntry> = coroutineScope {
+        omdbKey: String = "",
+    ): CalendarResult = coroutineScope {
         require(!to.isBefore(from)) { "to < from" }
         val api = apiFactory(apiKey)
-        // Widen by a day: a US evening airing lands on the next day in Romania,
-        // a Pacific midnight drop can land on the previous evening for other zones.
+        // Widen by a day: a US evening airing lands on the next day in Romania, and a
+        // licensed show can land a day after its original airing.
         val windowFrom = from.minusDays(1)
         val windowTo = to.plusDays(1)
 
-        val shows = discoverShows(api, windowFrom, windowTo)
-            .filter { show ->
-                val categories = ContentClassifier.classify(show.originalLanguage, show.originCountry, show.genreIds)
-                categories.none { it in settings.hiddenCategories }
+        val anticipatedDeferred = async {
+            try {
+                anticipatedSource.showIds(api, today())
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                emptySet()
             }
+        }
+
+        val days = ChronoUnit.DAYS.between(windowFrom, windowTo).toInt() + 1
+        val discovered = discoverShows(api, windowFrom, windowTo, minOf(maxDiscoverPages, maxDiscoverPagesPerDay * days))
+        var hiddenByCategory = 0
+        var hiddenByUser = 0
+        val shows = discovered.filter { show ->
+            when {
+                settings.isFollowed(show.id) -> true
+                settings.isHidden(show.id) -> false.also { hiddenByUser++ }
+                ContentClassifier.classify(show.originalLanguage, show.originCountry, show.genreIds)
+                    .any { it in settings.hiddenCategories } -> false.also { hiddenByCategory++ }
+                else -> true
+            }
+        }
+        val anticipated = anticipatedDeferred.await()
+        val useImdb = imdbRatings != null && omdbKey.isNotBlank()
 
         val semaphore = Semaphore(concurrency)
-        val results = shows.map { show ->
+        // Followed shows are always checked, even when discover ranks them too low.
+        val showIds = (shows.map { it.id } + settings.followedShows.map { it.id }).distinct()
+        val results = showIds.map { showId ->
             async {
                 semaphore.withPermit {
                     try {
-                        Result.success(episodesForShow(api, show.id, windowFrom, windowTo, settings))
+                        Result.success(episodesForShow(api, showId, windowFrom, windowTo, settings, anticipated, omdbKey.takeIf { useImdb }))
                     } catch (e: CancellationException) {
                         throw e
                     } catch (e: Exception) {
@@ -81,16 +119,38 @@ class EpisodeCalendarRepository(
             throw results.first().exceptionOrNull() ?: TmdbException("TMDB: eroare necunoscută")
         }
 
-        results.flatMap { it.getOrDefault(emptyList()) }
-            .filter { !it.releaseAt.toLocalDate().isBefore(from) && !it.releaseAt.toLocalDate().isAfter(to) }
-            .filter { entry -> entry.categories.none { it in settings.hiddenCategories } }
-            .distinctBy { Triple(it.showId, it.seasonNumber, it.episodeNumber) }
+        val inRange = results.flatMap { it.getOrDefault(emptyList()) }
+            .filter { !it.releaseDate.isBefore(from) && !it.releaseDate.isAfter(to) }
+            .distinctBy { it.key }
             .sortedWith(compareBy({ it.releaseAt }, { it.showName }, { it.seasonNumber }, { it.episodeNumber }))
+
+        // Details can reveal a category discover did not (e.g. TMDB type "Talk Show").
+        val (categoryHidden, visible) = inRange.partition { e ->
+            !e.isFollowed && e.categories.any { it in settings.hiddenCategories }
+        }
+        hiddenByCategory += categoryHidden.distinctBy { it.showId }.size
+
+        val (onMyApps, notOnMyApps) = if (settings.onlyInstalledApps) {
+            visible.partition { it.watchOn != null || it.isFollowed }
+        } else {
+            visible to emptyList()
+        }
+        val (passed, rejected) = onMyApps.partition { it.verdict.passed }
+
+        CalendarResult(
+            entries = passed,
+            rejected = rejected,
+            hiddenByCategory = hiddenByCategory,
+            hiddenByUser = hiddenByUser,
+            notOnMyApps = notOnMyApps.size,
+            usedImdb = useImdb,
+            anticipatedSource = anticipatedSource.label,
+        )
     }
 
-    private suspend fun discoverShows(api: TmdbApi, from: LocalDate, to: LocalDate): List<TvSummaryDto> {
+    private suspend fun discoverShows(api: TmdbApi, from: LocalDate, to: LocalDate, maxPages: Int): List<TvSummaryDto> {
         val first = api.discoverTvAiring(from, to, page = 1)
-        val lastPage = minOf(first.totalPages, maxDiscoverPages)
+        val lastPage = minOf(first.totalPages, maxPages)
         val rest = (2..lastPage).flatMap { page -> api.discoverTvAiring(from, to, page).results }
         return (first.results + rest).distinctBy { it.id }
     }
@@ -101,6 +161,8 @@ class EpisodeCalendarRepository(
         from: LocalDate,
         to: LocalDate,
         settings: AppSettings,
+        anticipated: Set<Int>,
+        omdbKey: String?,
     ): List<EpisodeEntry> {
         val details = api.tvDetails(showId)
         val anchors = listOfNotNull(details.lastEpisodeToAir, details.nextEpisodeToAir)
@@ -116,6 +178,11 @@ class EpisodeCalendarRepository(
             }
         }.ifEmpty { anchors }
 
+        val dated = episodes
+            .mapNotNull { episode -> episode.parsedAirDate()?.let { episode to it } }
+            .filter { (_, date) -> !date.isBefore(from) && !date.isAfter(to) }
+        if (dated.isEmpty()) return emptyList()
+
         val categories = ContentClassifier.classify(
             details.originalLanguage,
             details.originCountry,
@@ -125,14 +192,38 @@ class EpisodeCalendarRepository(
         val (app, region) = matchInstalledApp(details, settings)
         val availability = availability(details)
         val networkIds = details.networks.map { it.id }.toSet()
+        val lastEpisodeOfSeason = episodes.groupBy { it.seasonNumber }.mapValues { (_, list) -> list.maxOf { it.episodeNumber } }
+        val imdbId = details.externalIds?.imdbId?.takeIf { it.isNotBlank() }
+        val imdb = if (omdbKey != null && imdbId != null) imdbRatings?.rating(imdbId, omdbKey) else null
+        val followed = settings.isFollowed(details.id)
 
-        return episodes
-            .mapNotNull { episode -> episode.parsedAirDate()?.let { episode to it } }
-            .filter { (_, date) -> !date.isBefore(from) && !date.isAfter(to) }
-            .map { (episode, date) ->
-                val release = resolver.resolve(date, details.originCountry, networkIds, region)
-                toEntry(details, episode, release.at, release.approximate, app, region, availability, categories)
-            }
+        return dated.map { (episode, date) ->
+            val release = resolver.resolve(date, details.originCountry, networkIds, app, region)
+            val isNewShow = episode.seasonNumber == 1
+            val isAnticipated = details.id in anticipated
+            val verdict = QualityGate.evaluate(
+                QualityInput(
+                    isNewShow = isNewShow,
+                    isAnticipated = isAnticipated,
+                    isFollowed = followed,
+                    tmdbRating = details.voteAverage,
+                    tmdbVotes = details.voteCount,
+                    imdb = imdb,
+                ),
+                settings.thresholds,
+            )
+            toEntry(
+                details, episode, release.at, release.approximate, app, region, availability, categories,
+                isFinale = episode.episodeType == "finale" ||
+                    (details.status == "Ended" && lastEpisodeOfSeason[episode.seasonNumber] == episode.episodeNumber),
+                imdb = imdb,
+                isNewShow = isNewShow,
+                isAnticipated = isAnticipated,
+                followed = followed,
+                verdict = verdict,
+                delayed = release.delayed,
+            )
+        }
     }
 
     private fun toEntry(
@@ -144,6 +235,13 @@ class EpisodeCalendarRepository(
         region: Region?,
         availability: List<ProviderAvailability>,
         categories: Set<ContentFilter>,
+        isFinale: Boolean,
+        imdb: ImdbRating?,
+        isNewShow: Boolean,
+        isAnticipated: Boolean,
+        followed: Boolean,
+        verdict: QualityVerdict,
+        delayed: Boolean,
     ) = EpisodeEntry(
         showId = details.id,
         showName = details.name,
@@ -163,7 +261,18 @@ class EpisodeCalendarRepository(
         imdbId = details.externalIds?.imdbId,
         categories = categories,
         isSeasonPremiere = episode.episodeNumber == 1,
-        isNewShow = episode.seasonNumber == 1,
+        isNewShow = isNewShow,
+        showOverview = details.overview,
+        backdropUrl = TmdbImages.backdrop(details.backdropPath),
+        networkNames = details.networks.map { it.name }.filter { it.isNotBlank() },
+        genreNames = details.genres.map { it.name }.filter { it.isNotBlank() },
+        runtimeMinutes = episode.runtime ?: details.episodeRunTime.firstOrNull(),
+        isFinale = isFinale,
+        imdb = imdb,
+        isAnticipated = isAnticipated,
+        isFollowed = followed,
+        verdict = verdict,
+        delayedOnApp = delayed,
     )
 
     companion object {

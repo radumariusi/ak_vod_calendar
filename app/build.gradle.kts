@@ -13,7 +13,10 @@ val localProps = Properties().apply {
     val file = rootProject.file("local.properties")
     if (file.exists()) file.inputStream().use { load(it) }
 }
-val tmdbApiKey: String = (localProps.getProperty("TMDB_API_KEY") ?: System.getenv("TMDB_API_KEY") ?: "").trim()
+fun secret(name: String): String = (localProps.getProperty(name) ?: System.getenv(name) ?: "").trim().replace("\"", "")
+val tmdbApiKey: String = secret("TMDB_API_KEY")
+// Optional OMDb key for IMDb ratings (OMDB_API_KEY), same rules as the TMDB key.
+val omdbApiKey: String = secret("OMDB_API_KEY")
 
 android {
     namespace = "com.ak.vodcalendar"
@@ -23,9 +26,10 @@ android {
         applicationId = "com.ak.vodcalendar"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
-        versionName = "0.1.0"
-        buildConfigField("String", "TMDB_API_KEY", "\"${tmdbApiKey.replace("\"", "")}\"")
+        versionCode = 2
+        versionName = "0.2.0"
+        buildConfigField("String", "TMDB_API_KEY", "\"$tmdbApiKey\"")
+        buildConfigField("String", "OMDB_API_KEY", "\"$omdbApiKey\"")
     }
 
     buildTypes {

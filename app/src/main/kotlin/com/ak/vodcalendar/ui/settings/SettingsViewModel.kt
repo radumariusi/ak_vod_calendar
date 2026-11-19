@@ -38,6 +38,14 @@ class SettingsViewModel(private val repository: SettingsRepository) : ViewModel(
 
     fun saveTmdbKey(key: String) = update { it.copy(tmdbApiKey = key.trim()) }
 
+    fun saveOmdbKey(key: String) = update { it.copy(omdbApiKey = key.trim()) }
+
+    fun toggleOnlyInstalledApps() = update { it.copy(onlyInstalledApps = !it.onlyInstalledApps) }
+
+    fun unfollow(showId: Int) = update { it.unfollow(showId) }
+
+    fun unhide(showId: Int) = update { it.unhide(showId) }
+
     companion object {
         fun factory(repository: SettingsRepository) = viewModelFactory {
             initializer { SettingsViewModel(repository) }

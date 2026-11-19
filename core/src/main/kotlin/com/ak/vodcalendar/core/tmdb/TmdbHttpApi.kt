@@ -35,6 +35,14 @@ class TmdbHttpApi(
             addQueryParameter("page", page.toString())
         }
 
+    override suspend fun discoverTvPremieres(from: LocalDate, to: LocalDate, page: Int): PagedResponse<TvSummaryDto> =
+        get(PagedResponse.serializer(TvSummaryDto.serializer()), "discover/tv") {
+            addQueryParameter("first_air_date.gte", from.toString())
+            addQueryParameter("first_air_date.lte", to.toString())
+            addQueryParameter("sort_by", "popularity.desc")
+            addQueryParameter("page", page.toString())
+        }
+
     override suspend fun tvDetails(showId: Int): TvDetailsDto =
         get(TvDetailsDto.serializer(), "tv/$showId") {
             addQueryParameter("append_to_response", "watch/providers,external_ids")
