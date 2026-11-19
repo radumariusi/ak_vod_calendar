@@ -26,8 +26,8 @@ android {
         applicationId = "com.ak.vodcalendar"
         minSdk = 26
         targetSdk = 35
-        versionCode = 2
-        versionName = "0.2.0"
+        versionCode = 4
+        versionName = "0.4.0"
         buildConfigField("String", "TMDB_API_KEY", "\"$tmdbApiKey\"")
         buildConfigField("String", "OMDB_API_KEY", "\"$omdbApiKey\"")
     }

@@ -273,6 +273,7 @@ class EpisodeCalendarRepository(
         isFollowed = followed,
         verdict = verdict,
         delayedOnApp = delayed,
+        wikidataId = details.externalIds?.wikidataId?.takeIf { it.isNotBlank() },
     )
 
     companion object {

@@ -87,6 +87,8 @@ fun AppRoot(container: AppContainer) {
                         openEntry = null
                     },
                     onBack = { openEntry = null },
+                    settings = settings,
+                    container = container,
                 )
                 return@Column
             }
@@ -106,6 +108,8 @@ fun AppRoot(container: AppContainer) {
                         openMovie = null
                     },
                     onBack = { openMovie = null },
+                    settings = settings,
+                    container = container,
                 )
                 return@Column
             }

@@ -56,6 +56,8 @@ data class EpisodeDto(
 data class ExternalIdsDto(
     @SerialName("imdb_id") val imdbId: String? = null,
     @SerialName("tvdb_id") val tvdbId: Int? = null,
+    /** Wikidata item (e.g. "Q23572"); it holds the Netflix / Disney+ / Prime Video ids used for deep links. */
+    @SerialName("wikidata_id") val wikidataId: String? = null,
 )
 
 @Serializable

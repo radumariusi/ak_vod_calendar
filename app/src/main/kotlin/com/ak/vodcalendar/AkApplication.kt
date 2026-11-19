@@ -4,6 +4,7 @@ import android.app.Application
 import android.content.Context
 import com.ak.vodcalendar.core.calendar.EpisodeCalendarRepository
 import com.ak.vodcalendar.core.calendar.MovieCalendarRepository
+import com.ak.vodcalendar.core.launch.WikidataClient
 import com.ak.vodcalendar.core.model.AppSettings
 import com.ak.vodcalendar.core.omdb.OmdbClient
 import com.ak.vodcalendar.core.settings.SettingsRepository
@@ -41,12 +42,18 @@ class AppContainer(context: Context) {
 
     val omdb = OmdbClient(okHttp)
 
+    /** Netflix / Disney+ / Prime Video / Apple TV ids of a title, for "Deschide în …". */
+    val streamingIds = WikidataClient(okHttp)
+
     val episodeCalendar = EpisodeCalendarRepository(apiFactory = ::tmdbApi, imdbRatings = omdb)
 
     val movieCalendar = MovieCalendarRepository(apiFactory = ::tmdbApi, imdbRatings = omdb)
 
     /** "Reîncarcă" drops cached TMDB answers. */
-    fun clearCaches() = tmdbApis.values.forEach { it.clear() }
+    fun clearCaches() {
+        tmdbApis.values.forEach { it.clear() }
+        streamingIds.clear()
+    }
 
     /** Key typed in Settings wins over the one baked in at build time. */
     fun tmdbKey(settings: AppSettings): String = settings.tmdbApiKey.trim().ifBlank { BuildConfig.TMDB_API_KEY }

@@ -66,6 +66,8 @@ data class MovieEntry(
     val isFollowed: Boolean = false,
     val verdict: QualityVerdict = QualityVerdict.PASS_RATING,
     val popularity: Double = 0.0,
+    /** Wikidata item of the movie, used to find its id on each streaming service. */
+    val wikidataId: String? = null,
 ) {
     val releaseDate: LocalDate get() = releaseAt.toLocalDate()
     val key: String get() = "movie-$movieId-$kind-${region.code}"

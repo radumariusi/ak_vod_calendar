@@ -51,6 +51,8 @@ data class EpisodeEntry(
     val verdict: QualityVerdict = QualityVerdict.PASS_RATING,
     /** True when the user's app gets the episode later than the original airing (licensed show). */
     val delayedOnApp: Boolean = false,
+    /** Wikidata item of the show, used to find its id on each streaming service. */
+    val wikidataId: String? = null,
 ) {
     val code: String get() = "S%02dE%02d".format(seasonNumber, episodeNumber)
     val releaseDate: LocalDate get() = releaseAt.toLocalDate()
