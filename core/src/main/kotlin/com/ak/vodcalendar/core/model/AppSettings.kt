@@ -9,7 +9,7 @@ data class UserStreamingApp(
     val region: Region = Region.RO,
 )
 
-/** A show the user follows or hid, remembered with its name for the Settings screen. */
+/** A show or movie the user follows or hid, remembered with its name for the Settings screen. */
 @Serializable
 data class SavedShow(val id: Int, val name: String)
 
@@ -30,6 +30,15 @@ data class QualityThresholds(
     val newShowsOnlyIfAnticipated: Boolean = true,
 )
 
+/** Defaults for movies: a bit lower than for series, but with more IMDb votes. */
+val DefaultMovieThresholds = QualityThresholds(
+    minImdbRating = 6.5,
+    minImdbVotes = 10_000,
+    minTmdbRating = 6.5,
+    minTmdbVotes = 200,
+    newShowsOnlyIfAnticipated = true,
+)
+
 @Serializable
 data class AppSettings(
     /** Optional key typed in Settings; overrides the one baked in at build time. */
@@ -46,6 +55,14 @@ data class AppSettings(
     val hiddenShows: List<SavedShow> = emptyList(),
     /** Calendar shows only episodes the user can watch on an installed app. */
     val onlyInstalledApps: Boolean = false,
+    /** Quality gates for movies; `newShowsOnlyIfAnticipated` means "new movies only if anticipated". */
+    val movieThresholds: QualityThresholds = DefaultMovieThresholds,
+    /** Which kinds of movie releases the movie calendar shows. */
+    val movieKinds: Set<MovieReleaseKind> = MovieReleaseKind.entries.toSet(),
+    /** Movies always shown, whatever the thresholds say. */
+    val followedMovies: List<SavedShow> = emptyList(),
+    /** Movies never shown. */
+    val hiddenMovies: List<SavedShow> = emptyList(),
 ) {
     /** Adds apps that were added to the catalog after the settings were saved and drops unknown ones. */
     fun normalized(): AppSettings {
@@ -57,6 +74,8 @@ data class AppSettings(
             apps = known + missing,
             followedShows = followedShows.distinctBy { it.id },
             hiddenShows = hiddenShows.distinctBy { it.id },
+            followedMovies = followedMovies.distinctBy { it.id },
+            hiddenMovies = hiddenMovies.distinctBy { it.id },
         )
     }
 
@@ -80,4 +99,21 @@ data class AppSettings(
         copy(hiddenShows = hiddenShows.filterNot { it.id == show.id } + show, followedShows = followedShows.filterNot { it.id == show.id })
 
     fun unhide(showId: Int): AppSettings = copy(hiddenShows = hiddenShows.filterNot { it.id == showId })
+
+    fun isMovieFollowed(movieId: Int): Boolean = followedMovies.any { it.id == movieId }
+    fun isMovieHidden(movieId: Int): Boolean = hiddenMovies.any { it.id == movieId }
+
+    fun followMovie(movie: SavedShow): AppSettings = copy(
+        followedMovies = followedMovies.filterNot { it.id == movie.id } + movie,
+        hiddenMovies = hiddenMovies.filterNot { it.id == movie.id },
+    )
+
+    fun unfollowMovie(movieId: Int): AppSettings = copy(followedMovies = followedMovies.filterNot { it.id == movieId })
+
+    fun hideMovie(movie: SavedShow): AppSettings = copy(
+        hiddenMovies = hiddenMovies.filterNot { it.id == movie.id } + movie,
+        followedMovies = followedMovies.filterNot { it.id == movie.id },
+    )
+
+    fun unhideMovie(movieId: Int): AppSettings = copy(hiddenMovies = hiddenMovies.filterNot { it.id == movieId })
 }

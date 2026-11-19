@@ -39,4 +39,14 @@ class CachingTmdbApi(
 
     override suspend fun tvProviderList(region: String) =
         cached("providerList:$region") { delegate.tvProviderList(region) }
+
+    override suspend fun discoverMovieReleases(region: String, releaseTypes: Set<Int>, from: LocalDate, to: LocalDate, page: Int) =
+        cached("movieReleases:$region:${releaseTypes.sorted()}:$from:$to:$page") {
+            delegate.discoverMovieReleases(region, releaseTypes, from, to, page)
+        }
+
+    override suspend fun discoverMoviePremieres(from: LocalDate, to: LocalDate, page: Int) =
+        cached("moviePremieres:$from:$to:$page") { delegate.discoverMoviePremieres(from, to, page) }
+
+    override suspend fun movieDetails(movieId: Int) = cached("movie:$movieId") { delegate.movieDetails(movieId) }
 }

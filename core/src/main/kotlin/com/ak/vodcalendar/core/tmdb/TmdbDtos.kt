@@ -118,3 +118,76 @@ data class SeasonDto(
 
 @Serializable
 data class ProviderListDto(val results: List<ProviderDto> = emptyList())
+
+@Serializable
+data class MovieSummaryDto(
+    val id: Int,
+    val title: String = "",
+    @SerialName("original_title") val originalTitle: String = "",
+    @SerialName("original_language") val originalLanguage: String = "",
+    @SerialName("genre_ids") val genreIds: List<Int> = emptyList(),
+    val popularity: Double = 0.0,
+    @SerialName("vote_average") val voteAverage: Double = 0.0,
+    @SerialName("vote_count") val voteCount: Int = 0,
+    @SerialName("poster_path") val posterPath: String? = null,
+    @SerialName("backdrop_path") val backdropPath: String? = null,
+    @SerialName("release_date") val releaseDate: String? = null,
+    val adult: Boolean = false,
+)
+
+/**
+ * One release of a movie in one country. TMDB types: 1 premiere, 2 limited
+ * theatrical, 3 theatrical, 4 digital, 5 physical, 6 TV.
+ */
+@Serializable
+data class ReleaseDateDto(
+    val certification: String? = null,
+    val note: String? = null,
+    @SerialName("release_date") val releaseDate: String? = null,
+    val type: Int = 0,
+)
+
+@Serializable
+data class CountryReleaseDatesDto(
+    @SerialName("iso_3166_1") val country: String = "",
+    @SerialName("release_dates") val releaseDates: List<ReleaseDateDto> = emptyList(),
+)
+
+@Serializable
+data class ReleaseDatesDto(val results: List<CountryReleaseDatesDto> = emptyList())
+
+@Serializable
+data class CountryDto(@SerialName("iso_3166_1") val code: String = "", val name: String = "")
+
+@Serializable
+data class CompanyDto(val id: Int = 0, val name: String = "")
+
+@Serializable
+data class MovieDetailsDto(
+    val id: Int,
+    val title: String = "",
+    @SerialName("original_title") val originalTitle: String = "",
+    @SerialName("original_language") val originalLanguage: String = "",
+    @SerialName("origin_country") val originCountry: List<String> = emptyList(),
+    @SerialName("production_countries") val productionCountries: List<CountryDto> = emptyList(),
+    @SerialName("production_companies") val productionCompanies: List<CompanyDto> = emptyList(),
+    val genres: List<GenreDto> = emptyList(),
+    val runtime: Int? = null,
+    val status: String? = null,
+    val tagline: String? = null,
+    val popularity: Double = 0.0,
+    @SerialName("vote_average") val voteAverage: Double = 0.0,
+    @SerialName("vote_count") val voteCount: Int = 0,
+    @SerialName("poster_path") val posterPath: String? = null,
+    @SerialName("backdrop_path") val backdropPath: String? = null,
+    val overview: String? = null,
+    @SerialName("release_date") val releaseDate: String? = null,
+    @SerialName("imdb_id") val imdbId: String? = null,
+    @SerialName("release_dates") val releaseDates: ReleaseDatesDto? = null,
+    @SerialName("watch/providers") val watchProviders: WatchProvidersDto? = null,
+    @SerialName("external_ids") val externalIds: ExternalIdsDto? = null,
+) {
+    /** Countries the movie comes from: `origin_country`, else the production countries. */
+    val countries: List<String>
+        get() = originCountry.ifEmpty { productionCountries.map { it.code } }.filter { it.isNotBlank() }
+}
