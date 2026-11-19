@@ -152,7 +152,8 @@ object LaunchPlanner {
         }
     }
 
-    private fun encode(s: String): String = URLEncoder.encode(s, Charsets.UTF_8).replace("+", "%20")
+    // The (String, Charset) overload needs Android 13; this one works on every TV.
+    private fun encode(s: String): String = URLEncoder.encode(s, "UTF-8").replace("+", "%20")
 
     private fun StreamingApp.launcherNamesOrName(): List<String> = launcherNames.ifEmpty { listOf(name) }
 

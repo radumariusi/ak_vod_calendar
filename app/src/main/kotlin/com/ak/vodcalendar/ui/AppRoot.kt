@@ -24,6 +24,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.ExperimentalTvMaterial3Api
@@ -31,6 +32,8 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
 import com.ak.vodcalendar.AppContainer
+import com.ak.vodcalendar.CrashLog
+import com.ak.vodcalendar.ui.common.CrashDialog
 import com.ak.vodcalendar.core.model.AppSettings
 import com.ak.vodcalendar.core.model.EpisodeEntry
 import com.ak.vodcalendar.core.model.MovieEntry
@@ -63,6 +66,9 @@ fun AppRoot(container: AppContainer) {
         scope.launch { container.settingsRepository.update(transform) }
     }
 
+    val context = LocalContext.current
+    var crashReport by remember { mutableStateOf(CrashLog.takeLast(context)) }
+
     // One quiet check per app start; the top bar shows a button when a new version exists.
     LaunchedEffect(Unit) { container.updates.check(quiet = true) }
 
@@ -73,6 +79,8 @@ fun AppRoot(container: AppContainer) {
             else -> screen = Screen.SERIES
         }
     }
+
+    crashReport?.let { report -> CrashDialog(report) { crashReport = null } }
 
     Surface(modifier = Modifier.fillMaxSize(), shape = RectangleShape) {
         Column(modifier = Modifier.fillMaxSize().padding(horizontal = 48.dp, vertical = 24.dp)) {
