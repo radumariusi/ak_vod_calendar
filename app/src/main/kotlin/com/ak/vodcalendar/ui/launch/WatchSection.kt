@@ -73,9 +73,14 @@ fun WatchSection(
     var chooserOpen by remember { mutableStateOf(false) }
 
     fun run(target: LaunchTarget) {
-        val message = when (val result = launcher.launch(target)) {
-            is LaunchResult.Opened -> openedMessage(result, resolved)
-            is LaunchResult.NotAvailable -> "${target.label} nu e instalată pe TV (sau nu acceptă linkul)."
+        val message = try {
+            when (val result = launcher.launch(target)) {
+                is LaunchResult.Opened -> openedMessage(result, resolved)
+                is LaunchResult.NotAvailable -> "${target.label} nu e instalată pe TV (sau nu acceptă linkul)."
+            }
+        } catch (e: Throwable) {
+            // A bad link must never close the calendar.
+            "Nu am putut deschide ${target.label}: ${e.javaClass.simpleName}"
         }
         Toast.makeText(context, message, Toast.LENGTH_LONG).show()
     }
