@@ -19,9 +19,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalContext
@@ -65,40 +67,79 @@ fun SettingsScreen(container: AppContainer) {
         return
     }
 
-    LazyColumn(
-        modifier = Modifier.fillMaxSize(),
-        verticalArrangement = Arrangement.spacedBy(6.dp),
-        contentPadding = PaddingValues(bottom = 48.dp),
-    ) {
-        item(key = "updates-header") { SectionHeader("Actualizări") }
-        item(key = "updates") { UpdateSettings(container.updates) }
-        syncSettings(current, viewModel, container)
-        streamingApps(current, viewModel)
-        alternativePlayer(current, viewModel)
-        thresholds(current, viewModel)
-        movies(current, viewModel)
-        contentFilters(current, viewModel)
-        savedShows(current, viewModel)
-        savedMovies(current, viewModel)
-        item(key = "key-tmdb") {
-            ApiKeySection(
-                title = "Cheie TMDB",
-                value = current.tmdbApiKey,
-                hasBuiltInKey = container.hasBuiltInTmdbKey,
-                missingHint = "Nu există cheie. Introdu cheia API v3 sau tokenul v4 de pe themoviedb.org.",
-                onSave = viewModel::saveTmdbKey,
-            )
+    var category by rememberSaveable { mutableStateOf(SettingsCategory.APPS) }
+    Row(modifier = Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(32.dp)) {
+        // Left: categories. Focusing one shows its settings on the right.
+        LazyColumn(
+            modifier = Modifier.width(280.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+            contentPadding = PaddingValues(vertical = 8.dp),
+        ) {
+            items(SettingsCategory.entries, key = { it.name }) { item ->
+                ListItem(
+                    selected = item == category,
+                    onClick = { category = item },
+                    headlineContent = { Text(item.label) },
+                    modifier = Modifier.onFocusChanged { if (it.isFocused) category = item },
+                )
+            }
         }
-        item(key = "key-omdb") {
-            ApiKeySection(
-                title = "Cheie OMDb (note IMDb)",
-                value = current.omdbApiKey,
-                hasBuiltInKey = container.hasBuiltInOmdbKey,
-                missingHint = "Opțional. Fără ea se folosesc notele TMDB. Cheie gratuită pe omdbapi.com (1.000 de cereri pe zi).",
-                onSave = viewModel::saveOmdbKey,
-            )
+        LazyColumn(
+            modifier = Modifier.weight(1f).fillMaxSize(),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+            contentPadding = PaddingValues(bottom = 48.dp),
+        ) {
+            when (category) {
+                SettingsCategory.APPS -> streamingApps(current, viewModel)
+                SettingsCategory.PLAYER -> alternativePlayer(current, viewModel)
+                SettingsCategory.SERIES -> thresholds(current, viewModel)
+                SettingsCategory.MOVIES -> movies(current, viewModel)
+                SettingsCategory.FILTERS -> contentFilters(current, viewModel)
+                SettingsCategory.SAVED -> {
+                    savedShows(current, viewModel)
+                    savedMovies(current, viewModel)
+                }
+                SettingsCategory.KEYS -> {
+                    item(key = "key-tmdb") {
+                        ApiKeySection(
+                            title = "Cheie TMDB",
+                            value = current.tmdbApiKey,
+                            hasBuiltInKey = container.hasBuiltInTmdbKey,
+                            missingHint = "Nu există cheie. Introdu cheia API v3 sau tokenul v4 de pe themoviedb.org.",
+                            onSave = viewModel::saveTmdbKey,
+                        )
+                    }
+                    item(key = "key-omdb") {
+                        ApiKeySection(
+                            title = "Cheie OMDb (note IMDb)",
+                            value = current.omdbApiKey,
+                            hasBuiltInKey = container.hasBuiltInOmdbKey,
+                            missingHint = "Opțional. Fără ea se folosesc notele TMDB. Cheie gratuită pe omdbapi.com (1.000 de cereri pe zi).",
+                            onSave = viewModel::saveOmdbKey,
+                        )
+                    }
+                }
+                SettingsCategory.SYNC -> syncSettings(current, viewModel, container)
+                SettingsCategory.UPDATES -> {
+                    item(key = "updates-header") { SectionHeader("Actualizări") }
+                    item(key = "updates") { UpdateSettings(container.updates) }
+                }
+            }
         }
     }
+}
+
+/** Settings groups, listed on the left. */
+private enum class SettingsCategory(val label: String) {
+    APPS("Aplicații de streaming"),
+    PLAYER("Player alternativ"),
+    SERIES("Praguri seriale"),
+    MOVIES("Filme"),
+    FILTERS("Filtre de conținut"),
+    SAVED("Urmărite și ascunse"),
+    KEYS("Chei TMDB / OMDb"),
+    SYNC("Simkl, notificări, canal TV"),
+    UPDATES("Actualizări"),
 }
 
 private fun LazyListScope.streamingApps(settings: AppSettings, viewModel: SettingsViewModel) {

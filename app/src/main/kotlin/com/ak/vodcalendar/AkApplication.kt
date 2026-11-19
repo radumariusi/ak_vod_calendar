@@ -9,6 +9,7 @@ import com.ak.vodcalendar.core.model.AppSettings
 import com.ak.vodcalendar.core.omdb.OmdbClient
 import com.ak.vodcalendar.core.settings.SettingsRepository
 import com.ak.vodcalendar.core.tmdb.CachingTmdbApi
+import com.ak.vodcalendar.core.tmdb.TmdbApi
 import com.ak.vodcalendar.core.tmdb.TmdbHttpApi
 import com.ak.vodcalendar.data.DataStoreSettingsRepository
 import com.ak.vodcalendar.simkl.SimklManager
@@ -33,6 +34,7 @@ class AkApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        CrashLog.install(this)
         container = AppContainer(this)
         TodayNotifier.createChannel(this)
         // Background work follows the notification / TV channel settings. The first value
@@ -87,6 +89,9 @@ class AppContainer(context: Context) {
         tmdbApis.values.forEach { it.clear() }
         streamingIds.clear()
     }
+
+    /** TMDB client for the current key, or null when there's no key. */
+    fun tmdb(settings: AppSettings): TmdbApi? = tmdbKey(settings).takeIf { it.isNotBlank() }?.let(::tmdbApi)
 
     /** Key typed in Settings wins over the one baked in at build time. */
     fun tmdbKey(settings: AppSettings): String = settings.tmdbApiKey.trim().ifBlank { BuildConfig.TMDB_API_KEY }

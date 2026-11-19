@@ -10,19 +10,18 @@ import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.OutlinedButton
 import androidx.tv.material3.Text
 import com.ak.vodcalendar.AppContainer
-import com.ak.vodcalendar.core.model.EpisodeEntry
+import com.ak.vodcalendar.core.simkl.SimklLibrary
 import com.ak.vodcalendar.core.model.MovieEntry
 import com.ak.vodcalendar.simkl.SimklAccount
 
 /** "Marchează văzut" / "✓ Văzut" for an episode, synced to Simkl. Hidden when Simkl isn't connected. */
 @Composable
-fun EpisodeWatchedButton(entry: EpisodeEntry, container: AppContainer) {
+fun EpisodeWatchedButton(showId: Int, imdbId: String?, season: Int, episode: Int, container: AppContainer) {
     val account by container.simkl.account.collectAsStateWithLifecycle(SimklAccount())
     if (!account.connected) return
-    val watched = entry.key in account.watchedEpisodes
-    WatchedButton(watched) {
-        container.simkl.setEpisodeWatched(entry.showId, entry.imdbId, entry.seasonNumber, entry.episodeNumber, entry.key, !watched)
-    }
+    val key = SimklLibrary.episodeKey(showId, season, episode)
+    val watched = key in account.watchedEpisodes
+    WatchedButton(watched) { container.simkl.setEpisodeWatched(showId, imdbId, season, episode, key, !watched) }
 }
 
 @Composable

@@ -24,9 +24,17 @@ Fără ea, pragurile se aplică pe notele TMDB. Cheie gratuită pe omdbapi.com (
 răspunsurile se țin în cache 24 de ore). Se pune la fel ca cheia TMDB: în **Setări → Cheie OMDb**,
 în `local.properties` ca `OMDB_API_KEY=...` sau ca secret de repo `OMDB_API_KEY`.
 
+## Navigare
+
+- Calendarele de seriale și filme au **Zi**, **Săptămână** și **Lună**. În vederea pe lună, fiecare zi arată primele titluri; click pe numărul zilei deschide ziua.
+- **Click** pe un episod deschide **pagina serialului**: descriere, note, actori, trailer, episodul ales cu butoanele de deschidere și toate sezoanele cu episoadele lor. Click pe un episod din listă îl alege, click lung îl pornește.
+- **Click** pe un film deschide **pagina filmului**: descriere, note, actori, trailer, lansări, unde e disponibil și butoanele de deschidere.
+- **Click lung** pe un episod sau film (în orice vedere) îl **pornește direct**: în prima aplicație instalată care îl are (în țara setată), altfel în playerul implicit din Setări. Dacă nu există niciuna, se deschide pagina.
+- **Setările** sunt grupate pe categorii: categoriile în stânga, setările categoriei alese în dreapta.
+
 ## Calendarul de seriale
 
-- **Zi** sau **Săptămână** (luni–duminică), cu săgeți, „Azi” și „Reîncarcă”.
+- **Zi**, **Săptămână** (luni–duminică) sau **Lună**, cu săgeți, „Azi” și „Reîncarcă”.
 - **Ce intră**:
   - serialele în curs trebuie să treacă pragurile din Setări: nota și voturile IMDb (dacă ai cheie OMDb și OMDb știe serialul), altfel nota și voturile TMDB;
   - serialele noi (sezonul 1) intră dacă sunt pe lista celor mult așteptate sau dacă trec deja pragurile; comutatorul din Setări le poate lăsa pe toate;

@@ -27,6 +27,7 @@ import java.time.temporal.TemporalAdjusters
 enum class CalendarMode(val label: String) {
     DAY("Zi"),
     WEEK("Săptămână"),
+    MONTH("Lună"),
 }
 
 data class CalendarUiState(
@@ -86,6 +87,7 @@ class CalendarViewModel(private val container: AppContainer) : ViewModel() {
             val monday = anchor.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
             monday to monday.plusDays(6)
         }
+        CalendarMode.MONTH -> anchor.withDayOfMonth(1) to anchor.with(TemporalAdjusters.lastDayOfMonth())
     }
 
     private fun load(request: Request) = flow {
@@ -118,12 +120,25 @@ class CalendarViewModel(private val container: AppContainer) : ViewModel() {
         }
     }
 
-    private fun step(): Long = if (mode.value == CalendarMode.WEEK) 7 else 1
+    private fun move(date: LocalDate, forward: Boolean): LocalDate {
+        val sign = if (forward) 1L else -1L
+        return when (mode.value) {
+            CalendarMode.DAY -> date.plusDays(sign)
+            CalendarMode.WEEK -> date.plusWeeks(sign)
+            CalendarMode.MONTH -> date.withDayOfMonth(1).plusMonths(sign)
+        }
+    }
 
-    fun previous() = anchor.update { it.minusDays(step()) }
-    fun next() = anchor.update { it.plusDays(step()) }
+    fun previous() = anchor.update { move(it, forward = false) }
+    fun next() = anchor.update { move(it, forward = true) }
     fun goToToday() = anchor.update { RomaniaTime.today() }
-    fun toggleMode() = mode.update { if (it == CalendarMode.DAY) CalendarMode.WEEK else CalendarMode.DAY }
+    fun setMode(newMode: CalendarMode) = mode.update { newMode }
+
+    /** From the month grid: show that day. */
+    fun openDay(date: LocalDate) {
+        anchor.update { date }
+        mode.update { CalendarMode.DAY }
+    }
     fun toggleShowRejected() = showRejected.update { !it }
 
     fun toggleOnlyInstalledApps() {

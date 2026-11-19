@@ -24,6 +24,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.ExperimentalTvMaterial3Api
@@ -31,13 +32,17 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
 import com.ak.vodcalendar.AppContainer
+import com.ak.vodcalendar.CrashLog
+import com.ak.vodcalendar.ui.common.CrashDialog
 import com.ak.vodcalendar.core.model.AppSettings
 import com.ak.vodcalendar.core.model.EpisodeEntry
 import com.ak.vodcalendar.core.model.MovieEntry
 import com.ak.vodcalendar.core.model.SavedShow
 import com.ak.vodcalendar.ui.calendar.CalendarScreen
 import com.ak.vodcalendar.ui.common.NavButton
-import com.ak.vodcalendar.ui.details.EpisodeDetailsScreen
+import com.ak.vodcalendar.ui.details.ShowScreen
+import com.ak.vodcalendar.ui.launch.QuickPlayer
+import com.ak.vodcalendar.core.launch.toContentRef
 import com.ak.vodcalendar.ui.movies.MovieCalendarScreen
 import com.ak.vodcalendar.ui.movies.MovieDetailsScreen
 import com.ak.vodcalendar.ui.settings.SettingsScreen
@@ -63,6 +68,24 @@ fun AppRoot(container: AppContainer) {
         scope.launch { container.settingsRepository.update(transform) }
     }
 
+    val context = LocalContext.current
+    val quickPlayer = remember { QuickPlayer(context, container) }
+
+    // Long press in the calendars: play right away, or open the page when there's nothing to play with.
+    fun playEpisode(e: EpisodeEntry) {
+        scope.launch {
+            if (!quickPlayer.play(e.toContentRef(), e.wikidataId, e.availability, e.watchOn, settings)) openEntry = e
+        }
+    }
+
+    fun playMovie(m: MovieEntry) {
+        scope.launch {
+            if (!quickPlayer.play(m.toContentRef(), m.wikidataId, m.availability, m.watchOn, settings)) openMovie = m
+        }
+    }
+
+    var crashReport by remember { mutableStateOf(CrashLog.takeLast(context)) }
+
     // One quiet check per app start; the top bar shows a button when a new version exists.
     LaunchedEffect(Unit) { container.updates.check(quiet = true) }
 
@@ -74,12 +97,14 @@ fun AppRoot(container: AppContainer) {
         }
     }
 
+    crashReport?.let { report -> CrashDialog(report) { crashReport = null } }
+
     Surface(modifier = Modifier.fillMaxSize(), shape = RectangleShape) {
         Column(modifier = Modifier.fillMaxSize().padding(horizontal = 48.dp, vertical = 24.dp)) {
             val entry = openEntry
             if (entry != null) {
                 val followed = settings.isFollowed(entry.showId)
-                EpisodeDetailsScreen(
+                ShowScreen(
                     entry = entry,
                     isFollowed = followed,
                     onToggleFollow = {
@@ -140,8 +165,8 @@ fun AppRoot(container: AppContainer) {
                 // Keeps each tab's scroll position when opening details or switching tabs.
                 stateHolder.SaveableStateProvider(screen.name) {
                     when (screen) {
-                        Screen.SERIES -> CalendarScreen(container, onOpen = { openEntry = it })
-                        Screen.MOVIES -> MovieCalendarScreen(container, onOpen = { openMovie = it })
+                        Screen.SERIES -> CalendarScreen(container, onOpen = { openEntry = it }, onPlay = ::playEpisode)
+                        Screen.MOVIES -> MovieCalendarScreen(container, onOpen = { openMovie = it }, onPlay = ::playMovie)
                         Screen.SETTINGS -> SettingsScreen(container)
                     }
                 }

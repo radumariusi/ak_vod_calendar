@@ -46,6 +46,9 @@ import com.ak.vodcalendar.core.model.MovieEntry
 import com.ak.vodcalendar.core.model.MovieReleaseKind
 import com.ak.vodcalendar.ui.calendar.CalendarMode
 import com.ak.vodcalendar.ui.common.InfoMessage
+import com.ak.vodcalendar.ui.common.MonthGrid
+import com.ak.vodcalendar.ui.common.MonthItem
+import com.ak.vodcalendar.ui.common.monthLabel
 import com.ak.vodcalendar.ui.common.NavButton
 import com.ak.vodcalendar.ui.common.dayLabel
 import com.ak.vodcalendar.ui.common.movieBadges
@@ -56,17 +59,19 @@ import com.ak.vodcalendar.ui.common.movieWhere
 import com.ak.vodcalendar.ui.common.weekLabel
 
 @Composable
-fun MovieCalendarScreen(container: AppContainer, onOpen: (MovieEntry) -> Unit) {
+fun MovieCalendarScreen(container: AppContainer, onOpen: (MovieEntry) -> Unit, onPlay: (MovieEntry) -> Unit) {
     val viewModel: MovieCalendarViewModel = viewModel(factory = MovieCalendarViewModel.factory(container))
     val state by viewModel.state.collectAsStateWithLifecycle()
     val dayListState = rememberLazyListState()
     val weekListState = rememberLazyListState()
+    val monthListState = rememberLazyListState()
     var shownPeriod by rememberSaveable { mutableStateOf("") }
     val period = "${state.mode}-${state.from}"
     LaunchedEffect(period) {
         if (shownPeriod.isNotEmpty() && shownPeriod != period) {
             dayListState.scrollToItem(0)
             weekListState.scrollToItem(0)
+            monthListState.scrollToItem(0)
         }
         shownPeriod = period
     }
@@ -75,7 +80,11 @@ fun MovieCalendarScreen(container: AppContainer, onOpen: (MovieEntry) -> Unit) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             OutlinedButton(onClick = viewModel::previous) { Text("◀") }
             Text(
-                text = if (state.mode == CalendarMode.DAY) dayLabel(state.from) else "Săptămâna " + weekLabel(state.from, state.to),
+                text = when (state.mode) {
+                    CalendarMode.DAY -> dayLabel(state.from)
+                    CalendarMode.WEEK -> "Săptămâna " + weekLabel(state.from, state.to)
+                    CalendarMode.MONTH -> monthLabel(state.from)
+                },
                 style = MaterialTheme.typography.titleLarge,
                 maxLines = 1,
                 modifier = Modifier.width(380.dp),
@@ -83,7 +92,7 @@ fun MovieCalendarScreen(container: AppContainer, onOpen: (MovieEntry) -> Unit) {
             OutlinedButton(onClick = viewModel::next) { Text("▶") }
             OutlinedButton(onClick = viewModel::goToToday) { Text("Azi") }
             CalendarMode.entries.forEach { mode ->
-                NavButton(label = mode.label, selected = state.mode == mode, onClick = { if (state.mode != mode) viewModel.toggleMode() })
+                NavButton(label = mode.label, selected = state.mode == mode, onClick = { viewModel.setMode(mode) })
             }
         }
         Row(
@@ -124,7 +133,7 @@ fun MovieCalendarScreen(container: AppContainer, onOpen: (MovieEntry) -> Unit) {
             )
             state.kinds.isEmpty() -> InfoMessage("Alege cel puțin un tip de lansare: Streaming, Digital, Cinema US sau Cinema RO.")
             state.loading && state.result == null -> InfoMessage(
-                if (state.mode == CalendarMode.WEEK) "Se încarcă filmele săptămânii… (prima dată durează mai mult)" else "Se încarcă filmele…",
+                if (state.mode != CalendarMode.DAY) "Se încarcă filmele săptămânii… (prima dată durează mai mult)" else "Se încarcă filmele…",
             )
             state.error != null -> InfoMessage("Eroare: ${state.error}")
             else -> {
@@ -133,9 +142,20 @@ fun MovieCalendarScreen(container: AppContainer, onOpen: (MovieEntry) -> Unit) {
                 if (state.visible.isEmpty()) {
                     InfoMessage("Niciun film în perioada asta după filtrele tale.")
                 } else if (state.mode == CalendarMode.DAY) {
-                    DayList(state.visible, dayListState, onOpen)
+                    DayList(state.visible, dayListState, onOpen, onPlay)
+                } else if (state.mode == CalendarMode.WEEK) {
+                    WeekGrid(state, weekListState, onOpen, onPlay)
                 } else {
-                    WeekGrid(state, weekListState, onOpen)
+                    val byKey = state.visible.associateBy { it.key }
+                    MonthGrid(
+                        from = state.from,
+                        to = state.to,
+                        itemsByDay = state.visible.groupBy({ it.releaseDate }, { MonthItem(it.key, it.title + " · " + it.kind.short, dimmed = !it.verdict.passed) }),
+                        listState = monthListState,
+                        onOpen = { key -> byKey[key]?.let(onOpen) },
+                        onLongPress = { key -> byKey[key]?.let(onPlay) },
+                        onOpenDay = viewModel::openDay,
+                    )
                 }
             }
         }
@@ -163,18 +183,18 @@ private fun Summary(state: MovieCalendarUiState, result: MovieCalendarResult) {
 }
 
 @Composable
-private fun DayList(entries: List<MovieEntry>, listState: LazyListState, onOpen: (MovieEntry) -> Unit) {
+private fun DayList(entries: List<MovieEntry>, listState: LazyListState, onOpen: (MovieEntry) -> Unit, onPlay: (MovieEntry) -> Unit) {
     LazyColumn(
         state = listState,
         verticalArrangement = Arrangement.spacedBy(12.dp),
         contentPadding = PaddingValues(vertical = 8.dp),
     ) {
-        items(entries, key = { it.key }) { entry -> MovieRow(entry, onClick = { onOpen(entry) }) }
+        items(entries, key = { it.key }) { entry -> MovieRow(entry, onClick = { onOpen(entry) }, onLongClick = { onPlay(entry) }) }
     }
 }
 
 @Composable
-private fun WeekGrid(state: MovieCalendarUiState, listState: LazyListState, onOpen: (MovieEntry) -> Unit) {
+private fun WeekGrid(state: MovieCalendarUiState, listState: LazyListState, onOpen: (MovieEntry) -> Unit, onPlay: (MovieEntry) -> Unit) {
     val byDay = state.visible.groupBy { it.releaseDate }
     LazyColumn(
         state = listState,
@@ -196,7 +216,7 @@ private fun WeekGrid(state: MovieCalendarUiState, listState: LazyListState, onOp
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
                         contentPadding = PaddingValues(vertical = 4.dp, horizontal = 4.dp),
                     ) {
-                        items(entries, key = { it.key }) { entry -> MoviePosterCard(entry, onClick = { onOpen(entry) }) }
+                        items(entries, key = { it.key }) { entry -> MoviePosterCard(entry, onClick = { onOpen(entry) }, onLongClick = { onPlay(entry) }) }
                     }
                 }
             }
@@ -221,9 +241,9 @@ private fun MoviePoster(entry: MovieEntry, modifier: Modifier) {
 }
 
 @Composable
-private fun MoviePosterCard(entry: MovieEntry, onClick: () -> Unit) {
+private fun MoviePosterCard(entry: MovieEntry, onClick: () -> Unit, onLongClick: () -> Unit) {
     val dim = if (entry.verdict.passed) 1f else 0.45f
-    Card(onClick = onClick, modifier = Modifier.width(150.dp).alpha(dim)) {
+    Card(onClick = onClick, onLongClick = onLongClick, modifier = Modifier.width(150.dp).alpha(dim)) {
         Column {
             MoviePoster(entry, Modifier.fillMaxWidth().height(200.dp))
             Column(modifier = Modifier.padding(8.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
@@ -248,9 +268,9 @@ private fun MoviePosterCard(entry: MovieEntry, onClick: () -> Unit) {
 }
 
 @Composable
-private fun MovieRow(entry: MovieEntry, onClick: () -> Unit) {
+private fun MovieRow(entry: MovieEntry, onClick: () -> Unit, onLongClick: () -> Unit) {
     val dim = if (entry.verdict.passed) 1f else 0.45f
-    Card(onClick = onClick, modifier = Modifier.fillMaxWidth().alpha(dim)) {
+    Card(onClick = onClick, onLongClick = onLongClick, modifier = Modifier.fillMaxWidth().alpha(dim)) {
         Row(modifier = Modifier.padding(12.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             MoviePoster(entry, Modifier.width(80.dp).height(120.dp))
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {

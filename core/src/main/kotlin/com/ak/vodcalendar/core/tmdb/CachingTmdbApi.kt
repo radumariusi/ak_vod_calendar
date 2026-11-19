@@ -49,4 +49,10 @@ class CachingTmdbApi(
         cached("moviePremieres:$from:$to:$page") { delegate.discoverMoviePremieres(from, to, page) }
 
     override suspend fun movieDetails(movieId: Int) = cached("movie:$movieId") { delegate.movieDetails(movieId) }
+
+    override suspend fun credits(type: MediaKind, id: Int) =
+        cached("credits:${type.path}:$id") { delegate.credits(type, id) }
+
+    override suspend fun videos(type: MediaKind, id: Int) =
+        cached("videos:${type.path}:$id") { delegate.videos(type, id) }
 }

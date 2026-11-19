@@ -193,3 +193,38 @@ data class MovieDetailsDto(
     val countries: List<String>
         get() = originCountry.ifEmpty { productionCountries.map { it.code } }.filter { it.isNotBlank() }
 }
+
+@Serializable
+data class CastDto(
+    val name: String = "",
+    val character: String? = null,
+    @SerialName("profile_path") val profilePath: String? = null,
+    val order: Int = 999,
+)
+
+@Serializable
+data class CreditsDto(val cast: List<CastDto> = emptyList())
+
+@Serializable
+data class VideoDto(
+    val key: String = "",
+    val name: String? = null,
+    val site: String = "",
+    val type: String = "",
+    val official: Boolean = false,
+    @SerialName("iso_639_1") val language: String? = null,
+)
+
+@Serializable
+data class VideosDto(val results: List<VideoDto> = emptyList()) {
+    /** Best YouTube trailer: official trailers first, then teasers. */
+    fun bestTrailer(): VideoDto? = results
+        .filter { it.site.equals("YouTube", ignoreCase = true) && it.key.isNotBlank() }
+        .sortedWith(
+            compareBy<VideoDto>(
+                { if (it.type == "Trailer") 0 else if (it.type == "Teaser") 1 else 2 },
+                { if (it.official) 0 else 1 },
+            ),
+        )
+        .firstOrNull { it.type == "Trailer" || it.type == "Teaser" }
+}
