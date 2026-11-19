@@ -2,7 +2,11 @@ package com.ak.vodcalendar.core.filter
 
 import com.ak.vodcalendar.core.model.ContentFilter
 
-/** Maps TMDB metadata of a show to the [ContentFilter] categories it belongs to. */
+/**
+ * Maps TMDB metadata of a show or movie to the [ContentFilter] categories it
+ * belongs to. Movie and TV genre ids share the common genres (animation 16,
+ * drama 18, documentary 99); 10770 is the movie genre "TV Movie".
+ */
 object ContentClassifier {
 
     private const val ANIMATION = 16
@@ -13,6 +17,7 @@ object ContentClassifier {
     private const val REALITY = 10764
     private const val SOAP = 10766
     private const val TALK = 10767
+    private const val TV_MOVIE = 10770
 
     private val indianLanguages = setOf("hi", "ta", "te", "ml", "kn", "bn", "mr", "pa", "gu", "ur")
     private val chineseLanguages = setOf("zh", "cn", "yue")
@@ -44,6 +49,7 @@ object ContentClassifier {
         if (NEWS in genres || type == "news") result += ContentFilter.NEWS
         if (DOCUMENTARY in genres || type == "documentary") result += ContentFilter.DOCUMENTARY
         if (KIDS in genres) result += ContentFilter.KIDS
+        if (TV_MOVIE in genres) result += ContentFilter.TV_MOVIE
         return result
     }
 }

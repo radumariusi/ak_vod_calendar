@@ -7,8 +7,8 @@ pe aplicațiile de streaming pe care le ai, cu ora României.
 
 | Modul | Ce conține |
 |---|---|
-| `core` | Kotlin pur (fără Android): modele, clienți TMDB și OMDb, calculul orei de lansare, filtre de conținut, regulile de calitate, lista de seriale anticipate, repository-ul de calendar. Are teste unitare. |
-| `app` | Aplicația Android TV: calendarul de seriale (zi/săptămână), detaliile episodului, Setări, DataStore pentru setări, legarea dependențelor. |
+| `core` | Kotlin pur (fără Android): modele, clienți TMDB și OMDb, calculul orei de lansare, filtre de conținut, regulile de calitate, listele de seriale și filme anticipate, repository-urile de calendar (seriale și filme). Are teste unitare. |
+| `app` | Aplicația Android TV: calendarul de seriale și cel de filme (zi/săptămână), detaliile episodului și ale filmului, Setări, DataStore pentru setări, legarea dependențelor. |
 
 ## Cheia TMDB
 
@@ -43,6 +43,26 @@ plus cele mai populare 40 care au avut premiera în ultimele 150 de zile (ca un 
 Popularitatea TMDB urmărește vizualizările, watchlist-urile și voturile de pe TMDB, deci prinde bine hype-ul.
 Sursa e în spatele interfeței `AnticipatedShowsSource`, ca Simkl sau alt serviciu să poată fi adăugat în etapa 5.
 
+## Calendarul de filme
+
+Tabul **Filme**, implicit pe săptămână, cu aceleași săgeți, „Azi” și „Reîncarcă”. Patru tipuri de lansări, fiecare cu buton de pornit/oprit (și în Setări):
+
+- **Streaming**: premiera pe o platformă (un original Netflix, un film care apare pe Disney+). Data e din țara setată pentru aplicație (RO sau US). Platformele care lansează peste tot deodată (Netflix, Disney+, Prime Video, Max, Apple TV+, Paramount+) apar și pe aplicația setată pe RO, chiar dacă TMDB are doar data din SUA. Ora: 00:00 ora Pacificului, adică 10:00 în România; pentru celelalte, 00:00 în țara aplicației.
+- **Digital**: închiriere / cumpărare în SUA (Apple TV, Google TV, Prime Video), adică momentul în care filmul se poate vedea acasă. Ora: 00:00 ora New York-ului (07:00 în România).
+- **Cinema SUA** și **Cinema România**, separat. Fără oră, doar ziua. Dacă există doar lansare limitată, apare marcată „limitat”.
+
+Cum se decide dacă o lansare digitală e streaming: TMDB pune la data digitală o notă cu platforma („Netflix”, „Disney+”), sau filmul n-a rulat larg în cinema și e deja pe o platformă din catalog. Altfel e „Digital”. TMDB nu are date pentru momentul în care un film vechi ajunge pe o platformă (de ex. un film din cinema care apare pe Max după câteva luni), deci acelea nu apar în calendar; în detalii se vede unde e disponibil acum.
+
+**Ce intră**:
+
+- un film cu destule voturi trebuie să treacă pragurile pentru filme din Setări (implicit IMDb ≥ 6,5 cu 10.000 de voturi, altfel TMDB ≥ 6,5 cu 200 de voturi);
+- un film încă fără destule voturi (în cinema, sau abia lansat pe streaming) intră doar dacă e printre cele mai așteptate: cele mai populare 60 de filme din TMDB care apar în următoarele 180 de zile plus cele mai populare 80 apărute în ultimele 270 de zile (sursa e în spatele interfeței `AnticipatedMoviesSource`, ca Simkl să poată fi adăugat mai târziu);
+- filmele urmărite intră mereu, cele ascunse niciodată;
+- categoriile ascunse se aplică și filmelor (anime, indiene, turcești etc.), plus **Filme TV** (filmele făcute pentru televiziune), ascunse implicit;
+- **„Streaming doar pe aplicațiile mele”** lasă doar premierele de streaming de pe aplicațiile tale; cinema și digital rămân.
+
+**Detalii film**: descriere, note, toate lansările (cinema SUA/RO, digital, streaming), unde e disponibil acum în RO și US, „Urmăresc filmul” și „Ascunde filmul”.
+
 ## Build
 
 ```bash
@@ -73,6 +93,6 @@ Apoi contează aplicația ta și țara setată pentru ea (RO sau US):
 
 1. Schelet, setări, integrare TMDB ✅
 2. Calendarul de seriale cu filtre și praguri (IMDb prin OMDb, liste „mult așteptate”) ✅
-3. Filme: streaming, digital, cinema US/RO
+3. Filme: streaming, digital, cinema US/RO ✅
 4. Deep linkuri și „Deschide cu…” (DebridStream, Wuplay, Nuvio, Stremio)
 5. Sincronizare tracking (Simkl sau alt serviciu), notificări, canal pe ecranul Android TV

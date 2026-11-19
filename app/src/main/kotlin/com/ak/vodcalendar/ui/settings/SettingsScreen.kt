@@ -39,6 +39,7 @@ import com.ak.vodcalendar.AppContainer
 import com.ak.vodcalendar.core.model.AlternativePlayers
 import com.ak.vodcalendar.core.model.AppSettings
 import com.ak.vodcalendar.core.model.ContentFilter
+import com.ak.vodcalendar.core.model.MovieReleaseKind
 import com.ak.vodcalendar.core.model.StreamingCatalog
 import com.ak.vodcalendar.ui.common.InfoMessage
 import com.ak.vodcalendar.ui.common.SectionHeader
@@ -47,6 +48,7 @@ import java.util.Locale
 private val ratingSteps = listOf(5.0, 5.5, 6.0, 6.5, 7.0, 7.5, 8.0, 8.5)
 private val imdbVoteSteps = listOf(500, 1_000, 2_000, 5_000, 10_000, 20_000, 50_000)
 private val tmdbVoteSteps = listOf(20, 50, 100, 300, 500, 1_000, 2_000)
+private val tmdbMovieVoteSteps = listOf(50, 100, 200, 300, 500, 1_000, 2_000)
 
 private fun <T> List<T>.after(current: T): T = this[(indexOf(current) + 1).mod(size)]
 
@@ -68,8 +70,10 @@ fun SettingsScreen(container: AppContainer) {
         streamingApps(current, viewModel)
         alternativePlayer(current, viewModel)
         thresholds(current, viewModel)
+        movies(current, viewModel)
         contentFilters(current, viewModel)
         savedShows(current, viewModel)
+        savedMovies(current, viewModel)
         item(key = "key-tmdb") {
             ApiKeySection(
                 title = "Cheie TMDB",
@@ -189,8 +193,90 @@ private fun LazyListScope.thresholds(settings: AppSettings, viewModel: SettingsV
     }
 }
 
+private fun LazyListScope.movies(settings: AppSettings, viewModel: SettingsViewModel) {
+    val t = settings.movieThresholds
+    item {
+        SectionHeader(
+            "Filme",
+            "Ce lansări apar în calendarul de filme. Streaming: premierele pe platforme, cu data din țara setată " +
+                "pentru aplicație. Digital: închiriere / cumpărare în SUA. Cinema: separat SUA și România.",
+        )
+    }
+    items(MovieReleaseKind.entries, key = { "movie-kind-${it.name}" }) { kind ->
+        val on = kind in settings.movieKinds
+        ListItem(
+            selected = on,
+            onClick = { viewModel.toggleMovieKind(kind) },
+            headlineContent = { Text(kind.label) },
+            trailingContent = { Text(if (on) "Afișat" else "Ascuns") },
+        )
+    }
+    item {
+        SectionHeader(
+            "Praguri de calitate pentru filme",
+            "Un film cu destule voturi trebuie să treacă pragurile IMDb (dacă ai cheie OMDb), altfel pe cele TMDB. " +
+                "Unul încă fără voturi (în cinema sau abia lansat pe streaming) intră dacă e printre cele mai " +
+                "așteptate (cele mai populare filme noi din TMDB).",
+        )
+    }
+    item(key = "mth-imdb-rating") {
+        ValueRow("Notă minimă IMDb", "%.1f".format(Locale.US, t.minImdbRating)) {
+            viewModel.updateMovieThresholds { it.copy(minImdbRating = ratingSteps.after(it.minImdbRating)) }
+        }
+    }
+    item(key = "mth-imdb-votes") {
+        ValueRow("Voturi minime IMDb", t.minImdbVotes.toString()) {
+            viewModel.updateMovieThresholds { it.copy(minImdbVotes = imdbVoteSteps.after(it.minImdbVotes)) }
+        }
+    }
+    item(key = "mth-tmdb-rating") {
+        ValueRow("Notă minimă TMDB", "%.1f".format(Locale.US, t.minTmdbRating)) {
+            viewModel.updateMovieThresholds { it.copy(minTmdbRating = ratingSteps.after(it.minTmdbRating)) }
+        }
+    }
+    item(key = "mth-tmdb-votes") {
+        ValueRow("Voturi minime TMDB", t.minTmdbVotes.toString()) {
+            viewModel.updateMovieThresholds { it.copy(minTmdbVotes = tmdbMovieVoteSteps.after(it.minTmdbVotes)) }
+        }
+    }
+    item(key = "mth-anticipated") {
+        ValueRow("Filme noi doar din cele „mult așteptate”", if (t.newShowsOnlyIfAnticipated) "Da" else "Nu") {
+            viewModel.updateMovieThresholds { it.copy(newShowsOnlyIfAnticipated = !it.newShowsOnlyIfAnticipated) }
+        }
+    }
+}
+
+private fun LazyListScope.savedMovies(settings: AppSettings, viewModel: SettingsViewModel) {
+    item {
+        SectionHeader(
+            "Filme urmărite",
+            if (settings.followedMovies.isEmpty()) {
+                "Niciunul. Din detaliile unui film apasă „Urmăresc filmul” ca să-i vezi toate lansările, indiferent de praguri."
+            } else {
+                "Apar mereu, indiferent de praguri și filtre. Apasă pe unul ca să nu-l mai urmărești."
+            },
+        )
+    }
+    items(settings.followedMovies, key = { "followed-movie-${it.id}" }) { movie ->
+        ValueRow(movie.name, "Nu mai urmări") { viewModel.unfollowMovie(movie.id) }
+    }
+    item {
+        SectionHeader(
+            "Filme ascunse",
+            if (settings.hiddenMovies.isEmpty()) {
+                "Niciunul. Din detaliile unui film apasă „Ascunde filmul”."
+            } else {
+                "Nu mai apar în calendar. Apasă pe unul ca să-l afișezi din nou."
+            },
+        )
+    }
+    items(settings.hiddenMovies, key = { "hidden-movie-${it.id}" }) { movie ->
+        ValueRow(movie.name, "Afișează") { viewModel.unhideMovie(movie.id) }
+    }
+}
+
 private fun LazyListScope.contentFilters(settings: AppSettings, viewModel: SettingsViewModel) {
-    item { SectionHeader("Ascunde din calendar", "Categoriile ascunse nu mai apar deloc în calendar.") }
+    item { SectionHeader("Ascunde din calendar", "Categoriile ascunse nu mai apar deloc, nici la seriale, nici la filme.") }
     items(ContentFilter.entries, key = { "filter-${it.name}" }) { filter ->
         val hidden = filter in settings.hiddenCategories
         ListItem(

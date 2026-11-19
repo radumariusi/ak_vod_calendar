@@ -19,6 +19,24 @@ interface TmdbApi {
 
     /** All TV providers TMDB knows for a region, for Settings. */
     suspend fun tvProviderList(region: String): ProviderListDto
+
+    /**
+     * Movies with a release of one of [releaseTypes] (TMDB types, e.g. 2|3 cinema,
+     * 4 digital) in [region] between [from] and [to], most popular first.
+     */
+    suspend fun discoverMovieReleases(
+        region: String,
+        releaseTypes: Set<Int>,
+        from: LocalDate,
+        to: LocalDate,
+        page: Int,
+    ): PagedResponse<MovieSummaryDto>
+
+    /** Movies whose first release anywhere is between [from] and [to], most popular first. */
+    suspend fun discoverMoviePremieres(from: LocalDate, to: LocalDate, page: Int): PagedResponse<MovieSummaryDto>
+
+    /** Movie details with `release_dates`, `watch/providers` and `external_ids` appended. */
+    suspend fun movieDetails(movieId: Int): MovieDetailsDto
 }
 
 class TmdbException(message: String, val httpCode: Int? = null, cause: Throwable? = null) :

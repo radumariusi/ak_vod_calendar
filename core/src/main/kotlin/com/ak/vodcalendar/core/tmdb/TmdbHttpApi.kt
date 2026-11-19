@@ -59,6 +59,39 @@ class TmdbHttpApi(
             addQueryParameter("watch_region", region)
         }
 
+    override suspend fun discoverMovieReleases(
+        region: String,
+        releaseTypes: Set<Int>,
+        from: LocalDate,
+        to: LocalDate,
+        page: Int,
+    ): PagedResponse<MovieSummaryDto> =
+        get(PagedResponse.serializer(MovieSummaryDto.serializer()), "discover/movie") {
+            addQueryParameter("region", region)
+            addQueryParameter("with_release_type", releaseTypes.sorted().joinToString("|"))
+            addQueryParameter("release_date.gte", from.toString())
+            addQueryParameter("release_date.lte", to.toString())
+            addQueryParameter("sort_by", "popularity.desc")
+            addQueryParameter("include_adult", "false")
+            addQueryParameter("include_video", "false")
+            addQueryParameter("page", page.toString())
+        }
+
+    override suspend fun discoverMoviePremieres(from: LocalDate, to: LocalDate, page: Int): PagedResponse<MovieSummaryDto> =
+        get(PagedResponse.serializer(MovieSummaryDto.serializer()), "discover/movie") {
+            addQueryParameter("primary_release_date.gte", from.toString())
+            addQueryParameter("primary_release_date.lte", to.toString())
+            addQueryParameter("sort_by", "popularity.desc")
+            addQueryParameter("include_adult", "false")
+            addQueryParameter("include_video", "false")
+            addQueryParameter("page", page.toString())
+        }
+
+    override suspend fun movieDetails(movieId: Int): MovieDetailsDto =
+        get(MovieDetailsDto.serializer(), "movie/$movieId") {
+            addQueryParameter("append_to_response", "release_dates,watch/providers,external_ids")
+        }
+
     private suspend fun <T> get(
         deserializer: DeserializationStrategy<T>,
         path: String,

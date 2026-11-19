@@ -32,15 +32,19 @@ import androidx.tv.material3.Text
 import com.ak.vodcalendar.AppContainer
 import com.ak.vodcalendar.core.model.AppSettings
 import com.ak.vodcalendar.core.model.EpisodeEntry
+import com.ak.vodcalendar.core.model.MovieEntry
 import com.ak.vodcalendar.core.model.SavedShow
 import com.ak.vodcalendar.ui.calendar.CalendarScreen
 import com.ak.vodcalendar.ui.common.NavButton
 import com.ak.vodcalendar.ui.details.EpisodeDetailsScreen
+import com.ak.vodcalendar.ui.movies.MovieCalendarScreen
+import com.ak.vodcalendar.ui.movies.MovieDetailsScreen
 import com.ak.vodcalendar.ui.settings.SettingsScreen
 import kotlinx.coroutines.launch
 
 enum class Screen(val label: String) {
     SERIES("Seriale"),
+    MOVIES("Filme"),
     SETTINGS("Setări"),
 }
 
@@ -48,6 +52,7 @@ enum class Screen(val label: String) {
 fun AppRoot(container: AppContainer) {
     var screen by rememberSaveable { mutableStateOf(Screen.SERIES) }
     var openEntry by remember { mutableStateOf<EpisodeEntry?>(null) }
+    var openMovie by remember { mutableStateOf<MovieEntry?>(null) }
     val stateHolder = rememberSaveableStateHolder()
     val scope = rememberCoroutineScope()
     val settings by container.settingsRepository.settings.collectAsStateWithLifecycle(AppSettings())
@@ -56,8 +61,12 @@ fun AppRoot(container: AppContainer) {
         scope.launch { container.settingsRepository.update(transform) }
     }
 
-    BackHandler(enabled = openEntry != null || screen != Screen.SERIES) {
-        if (openEntry != null) openEntry = null else screen = Screen.SERIES
+    BackHandler(enabled = openEntry != null || openMovie != null || screen != Screen.SERIES) {
+        when {
+            openEntry != null -> openEntry = null
+            openMovie != null -> openMovie = null
+            else -> screen = Screen.SERIES
+        }
     }
 
     Surface(modifier = Modifier.fillMaxSize(), shape = RectangleShape) {
@@ -81,6 +90,25 @@ fun AppRoot(container: AppContainer) {
                 )
                 return@Column
             }
+            val movie = openMovie
+            if (movie != null) {
+                val followed = settings.isMovieFollowed(movie.movieId)
+                MovieDetailsScreen(
+                    entry = movie,
+                    isFollowed = followed,
+                    onToggleFollow = {
+                        updateSettings { s ->
+                            if (followed) s.unfollowMovie(movie.movieId) else s.followMovie(SavedShow(movie.movieId, movie.title))
+                        }
+                    },
+                    onHide = {
+                        updateSettings { it.hideMovie(SavedShow(movie.movieId, movie.title)) }
+                        openMovie = null
+                    },
+                    onBack = { openMovie = null },
+                )
+                return@Column
+            }
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -99,6 +127,7 @@ fun AppRoot(container: AppContainer) {
                 stateHolder.SaveableStateProvider(screen.name) {
                     when (screen) {
                         Screen.SERIES -> CalendarScreen(container, onOpen = { openEntry = it })
+                        Screen.MOVIES -> MovieCalendarScreen(container, onOpen = { openMovie = it })
                         Screen.SETTINGS -> SettingsScreen(container)
                     }
                 }

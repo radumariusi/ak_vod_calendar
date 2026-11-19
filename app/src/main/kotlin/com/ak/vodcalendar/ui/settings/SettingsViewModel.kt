@@ -6,6 +6,7 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.ak.vodcalendar.core.model.AppSettings
 import com.ak.vodcalendar.core.model.ContentFilter
+import com.ak.vodcalendar.core.model.MovieReleaseKind
 import com.ak.vodcalendar.core.model.QualityThresholds
 import com.ak.vodcalendar.core.settings.SettingsRepository
 import kotlinx.coroutines.flow.SharingStarted
@@ -45,6 +46,17 @@ class SettingsViewModel(private val repository: SettingsRepository) : ViewModel(
     fun unfollow(showId: Int) = update { it.unfollow(showId) }
 
     fun unhide(showId: Int) = update { it.unhide(showId) }
+
+    fun updateMovieThresholds(transform: (QualityThresholds) -> QualityThresholds) =
+        update { it.copy(movieThresholds = transform(it.movieThresholds)) }
+
+    fun toggleMovieKind(kind: MovieReleaseKind) = update { s ->
+        s.copy(movieKinds = if (kind in s.movieKinds) s.movieKinds - kind else s.movieKinds + kind)
+    }
+
+    fun unfollowMovie(movieId: Int) = update { it.unfollowMovie(movieId) }
+
+    fun unhideMovie(movieId: Int) = update { it.unhideMovie(movieId) }
 
     companion object {
         fun factory(repository: SettingsRepository) = viewModelFactory {
