@@ -98,6 +98,33 @@ Aplicația e găsită după pachet (lista din `StreamingCatalog`) sau, dacă pac
 
 Deschiderea unei aplicații după pachet sau nume e sigură. Tot ce e „best-effort” trebuie confirmat pe TV-ul tău; dacă un link nu merge, se trece automat la pasul următor (pagina → aplicația).
 
+## Simkl
+
+Fără Trakt. În **Setări → Simkl → Conectează Simkl** aplicația afișează un cod; intri pe `simkl.com/pin` de pe telefon
+și îl scrii. Apoi:
+
+- serialele din „Watching” și „Plan to watch” și filmele din „Plan to watch” contează ca urmărite: apar mereu în
+  calendar, indiferent de praguri (dacă ascunzi unul de mână, rămâne ascuns);
+- episoadele și filmele văzute pe Simkl nu mai apar în notificări și în canalul TV; în detalii ai butonul
+  **Marchează văzut** / **✓ Văzut**, care se trimite pe Simkl;
+- „Urmăresc serialul” / „Urmăresc filmul” pune titlul și pe lista Simkl („Watching” / „Plan to watch”).
+
+Sincronizarea se face la login, la pornirea aplicației (dacă e mai veche de o oră), la câteva ore în fundal și din
+butonul **Sincronizează acum**. Se potrivește după id-ul TMDB; titlurile fără id TMDB pe Simkl sunt sărite.
+
+**Client ID**: Simkl cere un Client ID de aplicație (creat pe <https://simkl.com/settings/developer/new/>, Redirect URI
+`urn:ietf:wg:oauth:2.0:oob`). Login-ul cu cod nu folosește secretul, deci ID-ul nu e secret: se pune în
+`SIMKL_CLIENT_ID` (local.properties / env) la build, sau în Setări → Client ID Simkl.
+
+## Notificări și canalul „Azi apare”
+
+- **Notificări** (Setări → Notificări și canal TV): oprite, doar ce urmărești (câte una pe titlu), sau ce urmărești plus
+  un rezumat al zilei. Vin o dată pe zi, la ora aleasă (ora României, implicit 09:00).
+- **Canalul „Azi apare”**: rând pe ecranul principal Android TV cu episoadele și filmele zilei, cele urmărite primele.
+  Se reface la pornirea aplicației și la fiecare 3 ore. Pe Google TV canalele aplicațiilor apar când stai pe iconița
+  aplicației în rândul de aplicații; pe Android TV clasic e un rând separat (se poate ascunde din „Personalizează canale”).
+- Butonul **Arată acum ce apare azi** trimite notificarea și reface canalul imediat, pentru test.
+
 ## Build
 
 ```bash
@@ -154,4 +181,4 @@ Apoi contează aplicația ta și țara setată pentru ea (RO sau US):
 2. Calendarul de seriale cu filtre și praguri (IMDb prin OMDb, liste „mult așteptate”) ✅
 3. Filme: streaming, digital, cinema US/RO ✅
 4. Deep linkuri și „Deschide cu…” (DebridStream, Wuplay, Nuvio, Stremio) ✅
-5. Sincronizare tracking (Simkl sau alt serviciu), notificări, canal pe ecranul Android TV
+5. Simkl (ce urmăresc / ce am văzut), notificări, canalul „Azi apare” pe ecranul Android TV ✅

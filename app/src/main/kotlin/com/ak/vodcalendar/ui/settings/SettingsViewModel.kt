@@ -7,6 +7,7 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import com.ak.vodcalendar.core.model.AppSettings
 import com.ak.vodcalendar.core.model.ContentFilter
 import com.ak.vodcalendar.core.model.MovieReleaseKind
+import com.ak.vodcalendar.core.model.NotificationMode
 import com.ak.vodcalendar.core.model.QualityThresholds
 import com.ak.vodcalendar.core.settings.SettingsRepository
 import kotlinx.coroutines.flow.SharingStarted
@@ -57,6 +58,17 @@ class SettingsViewModel(private val repository: SettingsRepository) : ViewModel(
     fun unfollowMovie(movieId: Int) = update { it.unfollowMovie(movieId) }
 
     fun unhideMovie(movieId: Int) = update { it.unhideMovie(movieId) }
+
+    fun saveSimklClientId(id: String) = update { it.copy(simklClientId = id.trim()) }
+
+    fun setNotificationMode(mode: NotificationMode) = update { it.copy(notifications = it.notifications.copy(mode = mode)) }
+
+    fun setNotificationHour(hour: Int) = update { it.copy(notifications = it.notifications.copy(hour = hour)) }
+
+    fun toggleNotificationMovies() =
+        update { it.copy(notifications = it.notifications.copy(includeMovies = !it.notifications.includeMovies)) }
+
+    fun toggleTvChannel() = update { it.copy(tvChannel = !it.tvChannel) }
 
     companion object {
         fun factory(repository: SettingsRepository) = viewModelFactory {

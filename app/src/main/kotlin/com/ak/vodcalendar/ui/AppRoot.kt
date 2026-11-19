@@ -86,6 +86,8 @@ fun AppRoot(container: AppContainer) {
                         updateSettings { s ->
                             if (followed) s.unfollow(entry.showId) else s.follow(SavedShow(entry.showId, entry.showName))
                         }
+                        // Also on the Simkl "Watching" list, when connected.
+                        if (!followed) container.simkl.addToList(isMovie = false, tmdbId = entry.showId, imdbId = entry.imdbId)
                     },
                     onHide = {
                         updateSettings { it.hide(SavedShow(entry.showId, entry.showName)) }
@@ -107,6 +109,7 @@ fun AppRoot(container: AppContainer) {
                         updateSettings { s ->
                             if (followed) s.unfollowMovie(movie.movieId) else s.followMovie(SavedShow(movie.movieId, movie.title))
                         }
+                        if (!followed) container.simkl.addToList(isMovie = true, tmdbId = movie.movieId, imdbId = movie.imdbId)
                     },
                     onHide = {
                         updateSettings { it.hideMovie(SavedShow(movie.movieId, movie.title)) }

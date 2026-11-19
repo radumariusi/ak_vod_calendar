@@ -35,6 +35,7 @@ import com.ak.vodcalendar.core.model.AppSettings
 import com.ak.vodcalendar.ui.launch.WatchSection
 import com.ak.vodcalendar.core.model.MovieEntry
 import com.ak.vodcalendar.core.model.Region
+import com.ak.vodcalendar.ui.common.MovieWatchedButton
 import com.ak.vodcalendar.ui.common.dayLabel
 import com.ak.vodcalendar.ui.common.movieBadges
 import com.ak.vodcalendar.ui.common.movieKindLabel
@@ -125,6 +126,7 @@ fun MovieDetailsScreen(
                             horizontalArrangement = Arrangement.spacedBy(12.dp),
                             modifier = Modifier.padding(top = 4.dp),
                         ) {
+                            MovieWatchedButton(entry, container)
                             OutlinedButton(onClick = onToggleFollow) {
                                 Text(if (isFollowed) "Nu mai urmări" else "Urmăresc filmul")
                             }

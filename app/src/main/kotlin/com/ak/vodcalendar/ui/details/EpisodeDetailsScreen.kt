@@ -35,6 +35,7 @@ import com.ak.vodcalendar.core.model.AppSettings
 import com.ak.vodcalendar.ui.launch.WatchSection
 import com.ak.vodcalendar.core.model.EpisodeEntry
 import com.ak.vodcalendar.core.model.Region
+import com.ak.vodcalendar.ui.common.EpisodeWatchedButton
 import com.ak.vodcalendar.ui.common.badges
 import com.ak.vodcalendar.ui.common.dayLabel
 import com.ak.vodcalendar.ui.common.ratingLabel
@@ -129,6 +130,7 @@ fun EpisodeDetailsScreen(
                             horizontalArrangement = Arrangement.spacedBy(12.dp),
                             modifier = Modifier.padding(top = 4.dp),
                         ) {
+                            EpisodeWatchedButton(entry, container)
                             OutlinedButton(onClick = onToggleFollow) {
                                 Text(if (isFollowed) "Nu mai urmări" else "Urmăresc serialul")
                             }

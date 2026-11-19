@@ -53,7 +53,7 @@ private val imdbVoteSteps = listOf(500, 1_000, 2_000, 5_000, 10_000, 20_000, 50_
 private val tmdbVoteSteps = listOf(20, 50, 100, 300, 500, 1_000, 2_000)
 private val tmdbMovieVoteSteps = listOf(50, 100, 200, 300, 500, 1_000, 2_000)
 
-private fun <T> List<T>.after(current: T): T = this[(indexOf(current) + 1).mod(size)]
+internal fun <T> List<T>.after(current: T): T = this[(indexOf(current) + 1).mod(size)]
 
 @Composable
 fun SettingsScreen(container: AppContainer) {
@@ -72,6 +72,7 @@ fun SettingsScreen(container: AppContainer) {
     ) {
         item(key = "updates-header") { SectionHeader("Actualizări") }
         item(key = "updates") { UpdateSettings(container.updates) }
+        syncSettings(current, viewModel, container)
         streamingApps(current, viewModel)
         alternativePlayer(current, viewModel)
         thresholds(current, viewModel)
@@ -343,7 +344,7 @@ private fun ValueRow(title: String, value: String, onClick: () -> Unit) {
 }
 
 @Composable
-private fun ApiKeySection(
+internal fun ApiKeySection(
     title: String,
     value: String,
     hasBuiltInKey: Boolean,

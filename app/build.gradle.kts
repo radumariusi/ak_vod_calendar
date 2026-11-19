@@ -17,10 +17,13 @@ fun secret(name: String): String = (localProps.getProperty(name) ?: System.geten
 val tmdbApiKey: String = secret("TMDB_API_KEY")
 // Optional OMDb key for IMDb ratings (OMDB_API_KEY), same rules as the TMDB key.
 val omdbApiKey: String = secret("OMDB_API_KEY")
+// Simkl client id for the TV login (SIMKL_CLIENT_ID). Not a secret: the PIN login uses no
+// client secret. The Settings field overrides it.
+val simklClientId: String = secret("SIMKL_CLIENT_ID")
 
 // Version: the base changes per stage; CI release builds add the run number (BUILD_NUMBER),
 // so every published APK has a higher versionCode and installs over the previous one.
-val baseVersion = "0.4"
+val baseVersion = "0.5"
 val buildNumber: Int? = System.getenv("BUILD_NUMBER")?.toIntOrNull()
 
 android {
@@ -31,10 +34,11 @@ android {
         applicationId = "com.ak.vodcalendar"
         minSdk = 26
         targetSdk = 35
-        versionCode = if (buildNumber != null) 100 + buildNumber else 4
+        versionCode = if (buildNumber != null) 100 + buildNumber else 5
         versionName = if (buildNumber != null) "$baseVersion.$buildNumber" else "$baseVersion.0"
         buildConfigField("String", "TMDB_API_KEY", "\"$tmdbApiKey\"")
         buildConfigField("String", "OMDB_API_KEY", "\"$omdbApiKey\"")
+        buildConfigField("String", "SIMKL_CLIENT_ID", "\"$simklClientId\"")
         // GitHub repo whose latest release the in-app updater installs.
         buildConfigField("String", "UPDATE_REPO", "\"radumariusi/ak_vod_calendar\"")
     }
@@ -106,6 +110,9 @@ dependencies {
     implementation(libs.androidx.compose.ui.tooling.preview)
     debugImplementation(libs.androidx.compose.ui.tooling)
     implementation(libs.androidx.tv.material)
+
+    implementation(libs.androidx.work.runtime)
+    implementation(libs.androidx.tvprovider)
 
     implementation(libs.coil.compose)
     implementation(libs.coil.network.okhttp)
