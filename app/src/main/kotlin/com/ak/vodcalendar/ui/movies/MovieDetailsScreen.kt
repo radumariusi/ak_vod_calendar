@@ -29,6 +29,15 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.OutlinedButton
 import androidx.tv.material3.Text
 import coil3.compose.AsyncImage
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextOverflow
+import com.ak.vodcalendar.core.tmdb.CreditsDto
+import com.ak.vodcalendar.core.tmdb.MediaKind
+import com.ak.vodcalendar.core.tmdb.VideosDto
+import com.ak.vodcalendar.ui.details.CastRow
+import com.ak.vodcalendar.ui.launch.openTrailer
 import com.ak.vodcalendar.AppContainer
 import com.ak.vodcalendar.core.launch.toContentRef
 import com.ak.vodcalendar.core.model.AppSettings
@@ -44,8 +53,8 @@ import com.ak.vodcalendar.ui.common.movieTimeLabel
 import com.ak.vodcalendar.ui.common.movieWhere
 
 /**
- * Movie details: every known release (cinema US/RO, digital, streaming), ratings
- * and where it streams, with "open in app" and "Deschide cu…".
+ * Movie page: description, ratings, cast, trailer, every known release (cinema US/RO,
+ * digital, streaming), where it streams, "open in app" and "Deschide cu…".
  */
 @Composable
 fun MovieDetailsScreen(
@@ -59,6 +68,14 @@ fun MovieDetailsScreen(
 ) {
     val firstButton = remember { FocusRequester() }
     LaunchedEffect(entry.key) { runCatching { firstButton.requestFocus() } }
+    val context = LocalContext.current
+    val api = remember(settings.tmdbApiKey) { container.tmdb(settings) }
+    val credits by produceState(CreditsDto(), entry.movieId) {
+        value = runCatching { api?.credits(MediaKind.MOVIE, entry.movieId) }.getOrNull() ?: CreditsDto()
+    }
+    val videos by produceState(VideosDto(), entry.movieId) {
+        value = runCatching { api?.videos(MediaKind.MOVIE, entry.movieId) }.getOrNull() ?: VideosDto()
+    }
 
     Box(modifier = Modifier.fillMaxSize()) {
         if (entry.backdropUrl != null) {
@@ -111,6 +128,9 @@ fun MovieDetailsScreen(
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
+                        entry.overview?.takeIf { it.isNotBlank() }?.let {
+                            Text(it, style = MaterialTheme.typography.bodyMedium, maxLines = 5, overflow = TextOverflow.Ellipsis, modifier = Modifier.width(820.dp))
+                        }
                         WatchSection(
                             ref = entry.toContentRef(),
                             wikidataId = entry.wikidataId,
@@ -125,6 +145,9 @@ fun MovieDetailsScreen(
                             horizontalArrangement = Arrangement.spacedBy(12.dp),
                             modifier = Modifier.padding(top = 4.dp),
                         ) {
+                            videos.bestTrailer()?.let { trailer ->
+                                OutlinedButton(onClick = { openTrailer(context, trailer.key) }) { Text("▶ Trailer") }
+                            }
                             OutlinedButton(onClick = onToggleFollow) {
                                 Text(if (isFollowed) "Nu mai urmări" else "Urmăresc filmul")
                             }
@@ -133,6 +156,9 @@ fun MovieDetailsScreen(
                         }
                     }
                 }
+            }
+            if (credits.cast.isNotEmpty()) {
+                item { CastRow(credits) }
             }
             item {
                 entry.tagline?.let { Section("", "„$it”") }

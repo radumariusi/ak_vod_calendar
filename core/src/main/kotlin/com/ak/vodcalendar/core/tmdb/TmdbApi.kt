@@ -37,7 +37,15 @@ interface TmdbApi {
 
     /** Movie details with `release_dates`, `watch/providers` and `external_ids` appended. */
     suspend fun movieDetails(movieId: Int): MovieDetailsDto
+
+    /** Main cast of a movie or show, for the details pages. */
+    suspend fun credits(type: MediaKind, id: Int): CreditsDto = CreditsDto()
+
+    /** Trailers and teasers of a movie or show. */
+    suspend fun videos(type: MediaKind, id: Int): VideosDto = VideosDto()
 }
+
+enum class MediaKind(val path: String) { MOVIE("movie"), TV("tv") }
 
 class TmdbException(message: String, val httpCode: Int? = null, cause: Throwable? = null) :
     Exception(message, cause)
@@ -48,4 +56,5 @@ object TmdbImages {
     fun still(path: String?): String? = path?.let { BASE + "w300" + it }
     fun logo(path: String?): String? = path?.let { BASE + "w92" + it }
     fun backdrop(path: String?): String? = path?.let { BASE + "w1280" + it }
+    fun profile(path: String?): String? = path?.let { BASE + "w185" + it }
 }

@@ -92,6 +92,15 @@ class TmdbHttpApi(
             addQueryParameter("append_to_response", "release_dates,watch/providers,external_ids")
         }
 
+    override suspend fun credits(type: MediaKind, id: Int): CreditsDto =
+        get(CreditsDto.serializer(), "${type.path}/$id/credits")
+
+    // Videos in any language: TMDB often has the trailer only in English.
+    override suspend fun videos(type: MediaKind, id: Int): VideosDto =
+        get(VideosDto.serializer(), "${type.path}/$id/videos") {
+            addQueryParameter("include_video_language", "en,ro,null")
+        }
+
     private suspend fun <T> get(
         deserializer: DeserializationStrategy<T>,
         path: String,
