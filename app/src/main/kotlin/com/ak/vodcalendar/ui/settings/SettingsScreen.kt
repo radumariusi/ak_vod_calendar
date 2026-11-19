@@ -69,7 +69,25 @@ fun SettingsScreen(container: AppContainer) {
         alternativePlayer(current, viewModel)
         thresholds(current, viewModel)
         contentFilters(current, viewModel)
-        item { TmdbKeySection(current, container.hasBuiltInTmdbKey, viewModel::saveTmdbKey) }
+        savedShows(current, viewModel)
+        item(key = "key-tmdb") {
+            ApiKeySection(
+                title = "Cheie TMDB",
+                value = current.tmdbApiKey,
+                hasBuiltInKey = container.hasBuiltInTmdbKey,
+                missingHint = "Nu există cheie. Introdu cheia API v3 sau tokenul v4 de pe themoviedb.org.",
+                onSave = viewModel::saveTmdbKey,
+            )
+        }
+        item(key = "key-omdb") {
+            ApiKeySection(
+                title = "Cheie OMDb (note IMDb)",
+                value = current.omdbApiKey,
+                hasBuiltInKey = container.hasBuiltInOmdbKey,
+                missingHint = "Opțional. Fără ea se folosesc notele TMDB. Cheie gratuită pe omdbapi.com (1.000 de cereri pe zi).",
+                onSave = viewModel::saveOmdbKey,
+            )
+        }
     }
 }
 
@@ -134,7 +152,9 @@ private fun LazyListScope.thresholds(settings: AppSettings, viewModel: SettingsV
     item {
         SectionHeader(
             "Praguri de calitate pentru seriale",
-            "Apasă pe un rând ca să schimbi valoarea. Se aplică din etapa 2 (IMDb prin OMDb).",
+            "Apasă pe un rând ca să schimbi valoarea. Serialele în curs trebuie să treacă pragurile IMDb " +
+                "(dacă ai cheie OMDb), altfel pe cele TMDB. Serialele noi intră dacă sunt pe lista celor mult " +
+                "așteptate (cele mai populare premiere din TMDB) sau dacă trec deja pragurile.",
         )
     }
     item(key = "th-imdb-rating") {
@@ -157,6 +177,11 @@ private fun LazyListScope.thresholds(settings: AppSettings, viewModel: SettingsV
             viewModel.updateThresholds { it.copy(minTmdbVotes = tmdbVoteSteps.after(it.minTmdbVotes)) }
         }
     }
+    item(key = "th-only-mine") {
+        ValueRow("Doar episoadele de pe aplicațiile mele", if (settings.onlyInstalledApps) "Da" else "Nu") {
+            viewModel.toggleOnlyInstalledApps()
+        }
+    }
     item(key = "th-anticipated") {
         ValueRow("Seriale noi doar din listele „mult așteptate”", if (t.newShowsOnlyIfAnticipated) "Da" else "Nu") {
             viewModel.updateThresholds { it.copy(newShowsOnlyIfAnticipated = !it.newShowsOnlyIfAnticipated) }
@@ -177,6 +202,35 @@ private fun LazyListScope.contentFilters(settings: AppSettings, viewModel: Setti
     }
 }
 
+private fun LazyListScope.savedShows(settings: AppSettings, viewModel: SettingsViewModel) {
+    item {
+        SectionHeader(
+            "Seriale urmărite",
+            if (settings.followedShows.isEmpty()) {
+                "Niciunul. Din detaliile unui episod apasă „Urmăresc serialul” ca să apară mereu, indiferent de praguri."
+            } else {
+                "Apar mereu, indiferent de praguri și filtre. Apasă pe unul ca să nu-l mai urmărești."
+            },
+        )
+    }
+    items(settings.followedShows, key = { "followed-${it.id}" }) { show ->
+        ValueRow(show.name, "Nu mai urmări") { viewModel.unfollow(show.id) }
+    }
+    item {
+        SectionHeader(
+            "Seriale ascunse",
+            if (settings.hiddenShows.isEmpty()) {
+                "Niciunul. Din detaliile unui episod apasă „Ascunde serialul”."
+            } else {
+                "Nu mai apar în calendar. Apasă pe unul ca să-l afișezi din nou."
+            },
+        )
+    }
+    items(settings.hiddenShows, key = { "hidden-${it.id}" }) { show ->
+        ValueRow(show.name, "Afișează") { viewModel.unhide(show.id) }
+    }
+}
+
 @Composable
 private fun ValueRow(title: String, value: String, onClick: () -> Unit) {
     ListItem(
@@ -188,14 +242,20 @@ private fun ValueRow(title: String, value: String, onClick: () -> Unit) {
 }
 
 @Composable
-private fun TmdbKeySection(settings: AppSettings, hasBuiltInKey: Boolean, onSave: (String) -> Unit) {
-    var draft by remember(settings.tmdbApiKey) { mutableStateOf(settings.tmdbApiKey) }
+private fun ApiKeySection(
+    title: String,
+    value: String,
+    hasBuiltInKey: Boolean,
+    missingHint: String,
+    onSave: (String) -> Unit,
+) {
+    var draft by remember(value) { mutableStateOf(value) }
     SectionHeader(
-        "Cheie TMDB",
+        title,
         when {
-            settings.tmdbApiKey.isNotBlank() -> "Folosești cheia introdusă aici."
+            value.isNotBlank() -> "Folosești cheia introdusă aici."
             hasBuiltInKey -> "Folosești cheia inclusă la build. Poți pune alta aici."
-            else -> "Nu există cheie. Introdu cheia API v3 sau tokenul v4 de pe themoviedb.org."
+            else -> missingHint
         },
     )
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -211,7 +271,7 @@ private fun TmdbKeySection(settings: AppSettings, hasBuiltInKey: Boolean, onSave
                 .padding(horizontal = 16.dp, vertical = 12.dp),
         )
         Button(onClick = { onSave(draft) }) { Text("Salvează") }
-        if (settings.tmdbApiKey.isNotBlank()) {
+        if (value.isNotBlank()) {
             OutlinedButton(onClick = { onSave("") }) { Text("Șterge") }
         }
     }

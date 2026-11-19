@@ -4,10 +4,13 @@ import android.app.Application
 import android.content.Context
 import com.ak.vodcalendar.core.calendar.EpisodeCalendarRepository
 import com.ak.vodcalendar.core.model.AppSettings
+import com.ak.vodcalendar.core.omdb.OmdbClient
 import com.ak.vodcalendar.core.settings.SettingsRepository
+import com.ak.vodcalendar.core.tmdb.CachingTmdbApi
 import com.ak.vodcalendar.core.tmdb.TmdbHttpApi
 import com.ak.vodcalendar.data.DataStoreSettingsRepository
 import okhttp3.OkHttpClient
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 
 class AkApplication : Application() {
@@ -29,10 +32,24 @@ class AppContainer(context: Context) {
 
     val settingsRepository: SettingsRepository = DataStoreSettingsRepository(context.applicationContext)
 
-    val episodeCalendar = EpisodeCalendarRepository(apiFactory = { key -> TmdbHttpApi(okHttp, key) })
+    /** One cached TMDB client per key, so moving between days reuses answers. */
+    private val tmdbApis = ConcurrentHashMap<String, CachingTmdbApi>()
+
+    private fun tmdbApi(key: String): CachingTmdbApi =
+        tmdbApis.getOrPut(key) { CachingTmdbApi(TmdbHttpApi(okHttp, key)) }
+
+    val omdb = OmdbClient(okHttp)
+
+    val episodeCalendar = EpisodeCalendarRepository(apiFactory = ::tmdbApi, imdbRatings = omdb)
+
+    /** "Reîncarcă" drops cached TMDB answers. */
+    fun clearCaches() = tmdbApis.values.forEach { it.clear() }
 
     /** Key typed in Settings wins over the one baked in at build time. */
     fun tmdbKey(settings: AppSettings): String = settings.tmdbApiKey.trim().ifBlank { BuildConfig.TMDB_API_KEY }
 
+    fun omdbKey(settings: AppSettings): String = settings.omdbApiKey.trim().ifBlank { BuildConfig.OMDB_API_KEY }
+
     val hasBuiltInTmdbKey: Boolean get() = BuildConfig.TMDB_API_KEY.isNotBlank()
+    val hasBuiltInOmdbKey: Boolean get() = BuildConfig.OMDB_API_KEY.isNotBlank()
 }

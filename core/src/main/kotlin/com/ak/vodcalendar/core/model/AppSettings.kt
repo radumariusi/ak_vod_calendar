@@ -9,9 +9,16 @@ data class UserStreamingApp(
     val region: Region = Region.RO,
 )
 
+/** A show the user follows or hid, remembered with its name for the Settings screen. */
+@Serializable
+data class SavedShow(val id: Int, val name: String)
+
 /**
- * Quality gates for series. Stage 1 only stores them; stage 2 applies them
- * (IMDb values need an OMDb key).
+ * Quality gates for series.
+ *
+ * Returning shows must reach the IMDb thresholds (when an OMDb key is set and
+ * OMDb knows the show) or else the TMDB thresholds. New shows (season 1) pass
+ * when they are on an "anticipated" list or already reach the thresholds.
  */
 @Serializable
 data class QualityThresholds(
@@ -27,10 +34,18 @@ data class QualityThresholds(
 data class AppSettings(
     /** Optional key typed in Settings; overrides the one baked in at build time. */
     val tmdbApiKey: String = "",
+    /** Optional OMDb key for IMDb ratings; overrides the one baked in at build time. */
+    val omdbApiKey: String = "",
     val apps: List<UserStreamingApp> = StreamingCatalog.all.map { UserStreamingApp(it.id) },
     val alternativePlayerId: String? = null,
     val thresholds: QualityThresholds = QualityThresholds(),
     val hiddenCategories: Set<ContentFilter> = ContentFilter.defaultHidden,
+    /** Always shown, whatever the thresholds say. */
+    val followedShows: List<SavedShow> = emptyList(),
+    /** Never shown. */
+    val hiddenShows: List<SavedShow> = emptyList(),
+    /** Calendar shows only episodes the user can watch on an installed app. */
+    val onlyInstalledApps: Boolean = false,
 ) {
     /** Adds apps that were added to the catalog after the settings were saved and drops unknown ones. */
     fun normalized(): AppSettings {
@@ -38,7 +53,11 @@ data class AppSettings(
         val missing = StreamingCatalog.all
             .filter { app -> known.none { it.appId == app.id } }
             .map { UserStreamingApp(it.id) }
-        return copy(apps = known + missing)
+        return copy(
+            apps = known + missing,
+            followedShows = followedShows.distinctBy { it.id },
+            hiddenShows = hiddenShows.distinctBy { it.id },
+        )
     }
 
     fun installedApps(): List<Pair<StreamingApp, Region>> = apps
@@ -47,4 +66,18 @@ data class AppSettings(
 
     fun updateApp(appId: String, transform: (UserStreamingApp) -> UserStreamingApp): AppSettings =
         copy(apps = apps.map { if (it.appId == appId) transform(it) else it })
+
+    fun isFollowed(showId: Int): Boolean = followedShows.any { it.id == showId }
+    fun isHidden(showId: Int): Boolean = hiddenShows.any { it.id == showId }
+
+    /** Following a show un-hides it, and the other way round. */
+    fun follow(show: SavedShow): AppSettings =
+        copy(followedShows = followedShows.filterNot { it.id == show.id } + show, hiddenShows = hiddenShows.filterNot { it.id == show.id })
+
+    fun unfollow(showId: Int): AppSettings = copy(followedShows = followedShows.filterNot { it.id == showId })
+
+    fun hide(show: SavedShow): AppSettings =
+        copy(hiddenShows = hiddenShows.filterNot { it.id == show.id } + show, followedShows = followedShows.filterNot { it.id == show.id })
+
+    fun unhide(showId: Int): AppSettings = copy(hiddenShows = hiddenShows.filterNot { it.id == showId })
 }

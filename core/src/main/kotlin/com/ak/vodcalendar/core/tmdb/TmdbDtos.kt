@@ -98,10 +98,13 @@ data class TvDetailsDto(
     @SerialName("vote_average") val voteAverage: Double = 0.0,
     @SerialName("vote_count") val voteCount: Int = 0,
     @SerialName("poster_path") val posterPath: String? = null,
+    @SerialName("backdrop_path") val backdropPath: String? = null,
+    val overview: String? = null,
     @SerialName("first_air_date") val firstAirDate: String? = null,
     @SerialName("number_of_seasons") val numberOfSeasons: Int = 0,
     @SerialName("last_episode_to_air") val lastEpisodeToAir: EpisodeDto? = null,
     @SerialName("next_episode_to_air") val nextEpisodeToAir: EpisodeDto? = null,
+    @SerialName("episode_run_time") val episodeRunTime: List<Int> = emptyList(),
     @SerialName("watch/providers") val watchProviders: WatchProvidersDto? = null,
     @SerialName("external_ids") val externalIds: ExternalIdsDto? = null,
 )

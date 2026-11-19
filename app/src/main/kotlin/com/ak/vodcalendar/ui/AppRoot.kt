@@ -15,34 +15,73 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
 import com.ak.vodcalendar.AppContainer
+import com.ak.vodcalendar.core.model.AppSettings
+import com.ak.vodcalendar.core.model.EpisodeEntry
+import com.ak.vodcalendar.core.model.SavedShow
+import com.ak.vodcalendar.ui.calendar.CalendarScreen
 import com.ak.vodcalendar.ui.common.NavButton
+import com.ak.vodcalendar.ui.details.EpisodeDetailsScreen
 import com.ak.vodcalendar.ui.settings.SettingsScreen
-import com.ak.vodcalendar.ui.today.TodayScreen
+import kotlinx.coroutines.launch
 
 enum class Screen(val label: String) {
-    TODAY("Azi"),
+    SERIES("Seriale"),
     SETTINGS("Setări"),
 }
 
 @Composable
 fun AppRoot(container: AppContainer) {
-    var screen by rememberSaveable { mutableStateOf(Screen.TODAY) }
+    var screen by rememberSaveable { mutableStateOf(Screen.SERIES) }
+    var openEntry by remember { mutableStateOf<EpisodeEntry?>(null) }
+    val stateHolder = rememberSaveableStateHolder()
+    val scope = rememberCoroutineScope()
+    val settings by container.settingsRepository.settings.collectAsStateWithLifecycle(AppSettings())
 
-    BackHandler(enabled = screen != Screen.TODAY) { screen = Screen.TODAY }
+    fun updateSettings(transform: (AppSettings) -> AppSettings) {
+        scope.launch { container.settingsRepository.update(transform) }
+    }
+
+    BackHandler(enabled = openEntry != null || screen != Screen.SERIES) {
+        if (openEntry != null) openEntry = null else screen = Screen.SERIES
+    }
 
     Surface(modifier = Modifier.fillMaxSize(), shape = RectangleShape) {
         Column(modifier = Modifier.fillMaxSize().padding(horizontal = 48.dp, vertical = 24.dp)) {
+            val entry = openEntry
+            if (entry != null) {
+                val followed = settings.isFollowed(entry.showId)
+                EpisodeDetailsScreen(
+                    entry = entry,
+                    isFollowed = followed,
+                    onToggleFollow = {
+                        updateSettings { s ->
+                            if (followed) s.unfollow(entry.showId) else s.follow(SavedShow(entry.showId, entry.showName))
+                        }
+                    },
+                    onHide = {
+                        updateSettings { it.hide(SavedShow(entry.showId, entry.showName)) }
+                        openEntry = null
+                    },
+                    onBack = { openEntry = null },
+                )
+                return@Column
+            }
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
@@ -56,9 +95,12 @@ fun AppRoot(container: AppContainer) {
             }
             Spacer(Modifier.padding(top = 16.dp))
             Box(modifier = Modifier.fillMaxSize()) {
-                when (screen) {
-                    Screen.TODAY -> TodayScreen(container)
-                    Screen.SETTINGS -> SettingsScreen(container)
+                // Keeps each tab's scroll position when opening details or switching tabs.
+                stateHolder.SaveableStateProvider(screen.name) {
+                    when (screen) {
+                        Screen.SERIES -> CalendarScreen(container, onOpen = { openEntry = it })
+                        Screen.SETTINGS -> SettingsScreen(container)
+                    }
                 }
             }
         }
