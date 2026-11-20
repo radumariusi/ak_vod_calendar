@@ -12,13 +12,14 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.tv.material3.Button
+import com.ak.vodcalendar.ui.touch.Button
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
-import androidx.tv.material3.OutlinedButton
+import com.ak.vodcalendar.ui.touch.OutlinedButton
 import androidx.tv.material3.Text
 import com.ak.vodcalendar.AppContainer
 import com.ak.vodcalendar.core.model.AppSettings
@@ -86,7 +87,12 @@ private fun WeTrakrSection(settings: AppSettings, container: AppContainer) {
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                OutlinedButton(onClick = wetrakr::cancelLogin) { Text("Anulează") }
+                val uriHandler = LocalUriHandler.current
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    // On a phone the page can be opened right here.
+                    Button(onClick = { runCatching { uriHandler.openUri(state.code.verificationUrl) } }) { Text("Deschide pagina") }
+                    OutlinedButton(onClick = wetrakr::cancelLogin) { Text("Anulează") }
+                }
             }
             else -> {
                 if (account.connected) {
