@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -40,6 +41,8 @@ import com.ak.vodcalendar.core.model.MovieEntry
 import com.ak.vodcalendar.core.model.SavedShow
 import com.ak.vodcalendar.ui.calendar.CalendarScreen
 import com.ak.vodcalendar.ui.common.NavButton
+import com.ak.vodcalendar.ui.common.WrapRow
+import com.ak.vodcalendar.ui.common.isCompact
 import com.ak.vodcalendar.ui.details.ShowScreen
 import com.ak.vodcalendar.ui.launch.QuickPlayer
 import com.ak.vodcalendar.core.launch.toContentRef
@@ -99,8 +102,15 @@ fun AppRoot(container: AppContainer) {
 
     crashReport?.let { report -> CrashDialog(report) { crashReport = null } }
 
+    val compact = isCompact()
     Surface(modifier = Modifier.fillMaxSize(), shape = RectangleShape) {
-        Column(modifier = Modifier.fillMaxSize().padding(horizontal = 48.dp, vertical = 24.dp)) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                // Phones draw under the status and navigation bars (edge to edge); TVs have none.
+                .safeDrawingPadding()
+                .padding(horizontal = if (compact) 12.dp else 48.dp, vertical = if (compact) 8.dp else 24.dp),
+        ) {
             val entry = openEntry
             if (entry != null) {
                 val followed = settings.isFollowed(entry.showId)
@@ -147,20 +157,30 @@ fun AppRoot(container: AppContainer) {
                 return@Column
             }
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                Text("AK VOD Calendar", style = MaterialTheme.typography.headlineSmall)
-                Spacer(Modifier.width(24.dp))
-                Screen.entries.forEach { item ->
-                    NavButton(label = item.label, selected = item == screen, onClick = { screen = item })
+            if (compact) {
+                // Phone: no app title, just the tabs (and the update button when there is one).
+                WrapRow(modifier = Modifier.fillMaxWidth()) {
+                    Screen.entries.forEach { item ->
+                        NavButton(label = item.label, selected = item == screen, onClick = { screen = item })
+                    }
+                    UpdateBadge(container.updates)
                 }
-                Spacer(Modifier.weight(1f))
-                UpdateBadge(container.updates)
+            } else {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    Text("AK VOD Calendar", style = MaterialTheme.typography.headlineSmall)
+                    Spacer(Modifier.width(24.dp))
+                    Screen.entries.forEach { item ->
+                        NavButton(label = item.label, selected = item == screen, onClick = { screen = item })
+                    }
+                    Spacer(Modifier.weight(1f))
+                    UpdateBadge(container.updates)
+                }
             }
-            Spacer(Modifier.padding(top = 16.dp))
+            Spacer(Modifier.padding(top = if (compact) 8.dp else 16.dp))
             Box(modifier = Modifier.fillMaxSize()) {
                 // Keeps each tab's scroll position when opening details or switching tabs.
                 stateHolder.SaveableStateProvider(screen.name) {
