@@ -95,7 +95,7 @@ class MovieCalendarRepository(
         val useImdb = imdbRatings != null && omdbKey.isNotBlank()
 
         val semaphore = Semaphore(concurrency)
-        val ids = (kept.map { it.id } + settings.followedMovies.map { it.id }).distinct()
+        val ids = (kept.map { it.id } + settings.followedMovieIds()).distinct()
         val results = ids.map { id ->
             async {
                 semaphore.withPermit {

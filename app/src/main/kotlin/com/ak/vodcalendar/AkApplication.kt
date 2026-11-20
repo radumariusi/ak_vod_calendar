@@ -12,7 +12,18 @@ import com.ak.vodcalendar.core.tmdb.CachingTmdbApi
 import com.ak.vodcalendar.core.tmdb.TmdbApi
 import com.ak.vodcalendar.core.tmdb.TmdbHttpApi
 import com.ak.vodcalendar.data.DataStoreSettingsRepository
+import com.ak.vodcalendar.simkl.SimklManager
+import com.ak.vodcalendar.simkl.SimklStore
+import com.ak.vodcalendar.today.TodayNotifier
+import com.ak.vodcalendar.today.TodayWorker
 import com.ak.vodcalendar.update.UpdateManager
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
@@ -25,6 +36,21 @@ class AkApplication : Application() {
         super.onCreate()
         CrashLog.install(this)
         container = AppContainer(this)
+        TodayNotifier.createChannel(this)
+        // Background work follows the notification / TV channel settings. The first value
+        // only schedules; a change later also refreshes the channel right away.
+        CoroutineScope(SupervisorJob() + Dispatchers.Default).launch {
+            var first = true
+            container.settingsRepository.settings
+                .map { Triple(it.notifications, it.tvChannel, it.simklShows.size + it.simklMovies.size) }
+                .distinctUntilChanged()
+                .collect {
+                    val settings = container.settingsRepository.settings.first()
+                    runCatching { TodayWorker.schedule(this@AkApplication, settings) }
+                    if (!first) runCatching { TodayWorker.refreshNow(this@AkApplication) }
+                    first = false
+                }
+        }
     }
 }
 
@@ -47,6 +73,9 @@ class AppContainer(context: Context) {
 
     /** In-app updates from the GitHub "Latest release". */
     val updates = UpdateManager(context, okHttp)
+
+    /** Simkl login, list sync and "văzut" marks. */
+    val simkl = SimklManager(okHttp, settingsRepository, SimklStore(context.applicationContext))
 
     /** Netflix / Disney+ / Prime Video / Apple TV ids of a title, for "Deschide în …". */
     val streamingIds = WikidataClient(okHttp)

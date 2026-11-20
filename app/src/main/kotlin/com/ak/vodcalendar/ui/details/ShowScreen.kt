@@ -57,6 +57,7 @@ import com.ak.vodcalendar.ui.common.badges
 import com.ak.vodcalendar.ui.common.dayLabel
 import com.ak.vodcalendar.ui.common.ratingLabel
 import com.ak.vodcalendar.ui.common.timeLabel
+import com.ak.vodcalendar.ui.common.EpisodeWatchedButton
 import com.ak.vodcalendar.ui.common.whereToWatch
 import com.ak.vodcalendar.ui.launch.QuickPlayer
 import com.ak.vodcalendar.ui.launch.WatchSection
@@ -188,6 +189,7 @@ fun ShowScreen(
                         videos.bestTrailer()?.let { trailer ->
                             OutlinedButton(onClick = { openTrailer(context, trailer.key) }) { Text("▶ Trailer") }
                         }
+                        EpisodeWatchedButton(entry.showId, entry.imdbId, selected.first, selected.second, container)
                         OutlinedButton(onClick = onToggleFollow) { Text(if (isFollowed) "Nu mai urmări" else "Urmăresc serialul") }
                         OutlinedButton(onClick = onHide) { Text("Ascunde serialul") }
                         OutlinedButton(onClick = onBack) { Text("Înapoi") }

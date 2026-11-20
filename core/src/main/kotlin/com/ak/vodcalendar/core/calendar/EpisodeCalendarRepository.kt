@@ -100,7 +100,7 @@ class EpisodeCalendarRepository(
 
         val semaphore = Semaphore(concurrency)
         // Followed shows are always checked, even when discover ranks them too low.
-        val showIds = (shows.map { it.id } + settings.followedShows.map { it.id }).distinct()
+        val showIds = (shows.map { it.id } + settings.followedShowIds()).distinct()
         val results = showIds.map { showId ->
             async {
                 semaphore.withPermit {
@@ -166,6 +166,14 @@ class EpisodeCalendarRepository(
     ): List<EpisodeEntry> {
         val details = api.tvDetails(showId)
         val anchors = listOfNotNull(details.lastEpisodeToAir, details.nextEpisodeToAir)
+        // Nothing can air in the window when the last aired episode is before it and the
+        // next one is after it (or unknown). Saves the season request for most followed
+        // shows (e.g. a long Simkl "Watching" list full of ended series).
+        val lastDate = details.lastEpisodeToAir?.parsedAirDate()
+        val nextDate = details.nextEpisodeToAir?.parsedAirDate()
+        val lastBefore = details.lastEpisodeToAir == null || (lastDate != null && lastDate.isBefore(from))
+        val nextAfter = details.nextEpisodeToAir == null || (nextDate != null && nextDate.isAfter(to))
+        if (lastBefore && nextAfter) return emptyList()
         val seasonNumbers = anchors.map { it.seasonNumber }.filter { it > 0 }.distinct()
 
         val episodes = seasonNumbers.flatMap { season ->

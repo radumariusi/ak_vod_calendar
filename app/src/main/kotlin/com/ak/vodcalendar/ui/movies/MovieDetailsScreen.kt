@@ -44,6 +44,7 @@ import com.ak.vodcalendar.core.model.AppSettings
 import com.ak.vodcalendar.ui.launch.WatchSection
 import com.ak.vodcalendar.core.model.MovieEntry
 import com.ak.vodcalendar.core.model.Region
+import com.ak.vodcalendar.ui.common.MovieWatchedButton
 import com.ak.vodcalendar.ui.common.dayLabel
 import com.ak.vodcalendar.ui.common.movieBadges
 import com.ak.vodcalendar.ui.common.movieKindLabel
@@ -148,6 +149,7 @@ fun MovieDetailsScreen(
                             videos.bestTrailer()?.let { trailer ->
                                 OutlinedButton(onClick = { openTrailer(context, trailer.key) }) { Text("▶ Trailer") }
                             }
+                            MovieWatchedButton(entry, container)
                             OutlinedButton(onClick = onToggleFollow) {
                                 Text(if (isFollowed) "Nu mai urmări" else "Urmăresc filmul")
                             }
