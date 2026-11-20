@@ -5,9 +5,9 @@ package com.ak.vodcalendar.ui.common
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.tv.material3.Button
+import com.ak.vodcalendar.ui.touch.Button
 import androidx.tv.material3.ExperimentalTvMaterial3Api
-import androidx.tv.material3.OutlinedButton
+import com.ak.vodcalendar.ui.touch.OutlinedButton
 import androidx.tv.material3.Text
 import com.ak.vodcalendar.AppContainer
 import com.ak.vodcalendar.core.simkl.SimklLibrary

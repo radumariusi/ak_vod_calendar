@@ -10,6 +10,8 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -26,11 +28,12 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
-import androidx.tv.material3.Button
+import com.ak.vodcalendar.ui.common.WrapRow
+import com.ak.vodcalendar.ui.touch.Button
 import androidx.tv.material3.ExperimentalTvMaterial3Api
-import androidx.tv.material3.ListItem
+import com.ak.vodcalendar.ui.touch.ListItem
 import androidx.tv.material3.MaterialTheme
-import androidx.tv.material3.OutlinedButton
+import com.ak.vodcalendar.ui.touch.OutlinedButton
 import androidx.tv.material3.Text
 import com.ak.vodcalendar.AppContainer
 import com.ak.vodcalendar.core.launch.ContentRef
@@ -94,7 +97,7 @@ fun WatchSection(
             }
             add(WatchButton("Deschide cu…", primary = isEmpty()) { chooserOpen = true })
         }
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        WrapRow {
             buttons.forEachIndexed { index, b ->
                 val modifier = if (index == 0) Modifier.focusRequester(firstFocus) else Modifier
                 if (b.primary) {
@@ -108,7 +111,7 @@ fun WatchSection(
             text = watchNote(resolved, streaming, defaultPlayer, missingService),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.width(900.dp),
+            modifier = Modifier.widthIn(max = 900.dp).fillMaxWidth(),
         )
     }
 
@@ -138,7 +141,8 @@ private fun ChooserDialog(
     Dialog(onDismissRequest = onDismiss) {
         Column(
             modifier = Modifier
-                .width(560.dp)
+                .widthIn(max = 560.dp)
+                .fillMaxWidth()
                 .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(12.dp))
                 .padding(24.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp),

@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -34,11 +35,13 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.tv.material3.Button
-import androidx.tv.material3.Card
+import com.ak.vodcalendar.ui.common.WrapRow
+import com.ak.vodcalendar.ui.common.isCompact
+import com.ak.vodcalendar.ui.touch.Button
+import com.ak.vodcalendar.ui.touch.Card
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
-import androidx.tv.material3.OutlinedButton
+import com.ak.vodcalendar.ui.touch.OutlinedButton
 import androidx.tv.material3.Text
 import coil3.compose.AsyncImage
 import com.ak.vodcalendar.AppContainer
@@ -124,7 +127,7 @@ fun ShowScreen(
         }
         LazyColumn(contentPadding = PaddingValues(bottom = 48.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             item(key = "header") {
-                Row(horizontalArrangement = Arrangement.spacedBy(32.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(if (isCompact()) 16.dp else 32.dp)) {
                     PosterBox(entry.posterUrl ?: entry.stillUrl, entry.showName)
                     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Text(entry.showName, style = MaterialTheme.typography.headlineMedium)
@@ -139,7 +142,7 @@ fun ShowScreen(
                         if (tags.isNotEmpty()) Text(tags.joinToString(" · "), style = MaterialTheme.typography.bodyMedium)
                         Text("Unde: " + whereToWatch(entry), style = MaterialTheme.typography.bodyLarge)
                         entry.showOverview?.takeIf { it.isNotBlank() }?.let {
-                            Text(it, style = MaterialTheme.typography.bodyMedium, maxLines = 5, overflow = TextOverflow.Ellipsis, modifier = Modifier.width(820.dp))
+                            Text(it, style = MaterialTheme.typography.bodyMedium, maxLines = 5, overflow = TextOverflow.Ellipsis, modifier = Modifier.widthIn(max = 820.dp).fillMaxWidth())
                         }
                     }
                 }
@@ -173,7 +176,7 @@ fun ShowScreen(
                     Text(
                         overview ?: "TMDB nu are încă descrierea episodului.",
                         style = MaterialTheme.typography.bodyMedium,
-                        modifier = Modifier.width(1000.dp),
+                        modifier = Modifier.widthIn(max = 1000.dp).fillMaxWidth(),
                     )
                     WatchSection(
                         ref = ref,
@@ -185,7 +188,7 @@ fun ShowScreen(
                         container = container,
                         firstFocus = firstButton,
                     )
-                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.padding(top = 4.dp)) {
+                    WrapRow(modifier = Modifier.padding(top = 4.dp)) {
                         videos.bestTrailer()?.let { trailer ->
                             OutlinedButton(onClick = { openTrailer(context, trailer.key) }) { Text("▶ Trailer") }
                         }
@@ -284,8 +287,8 @@ private fun EpisodeCard(ep: EpisodeDto, selected: Boolean, onClick: () -> Unit, 
 internal fun PosterBox(url: String?, title: String) {
     Box(
         modifier = Modifier
-            .width(200.dp)
-            .height(300.dp)
+            .width(if (isCompact()) 110.dp else 200.dp)
+            .height(if (isCompact()) 165.dp else 300.dp)
             .clip(RoundedCornerShape(8.dp))
             .background(MaterialTheme.colorScheme.surfaceVariant),
     ) {

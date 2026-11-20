@@ -34,16 +34,18 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.tv.material3.Card
+import com.ak.vodcalendar.ui.touch.Card
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
-import androidx.tv.material3.OutlinedButton
+import com.ak.vodcalendar.ui.touch.OutlinedButton
 import androidx.tv.material3.Text
 import coil3.compose.AsyncImage
 import com.ak.vodcalendar.AppContainer
 import com.ak.vodcalendar.core.model.CalendarResult
 import com.ak.vodcalendar.core.model.EpisodeEntry
 import com.ak.vodcalendar.ui.common.InfoMessage
+import com.ak.vodcalendar.ui.common.WrapRow
+import com.ak.vodcalendar.ui.common.isCompact
 import com.ak.vodcalendar.ui.common.MonthGrid
 import com.ak.vodcalendar.ui.common.MonthItem
 import com.ak.vodcalendar.ui.common.monthLabel
@@ -75,7 +77,10 @@ fun CalendarScreen(container: AppContainer, onOpen: (EpisodeEntry) -> Unit, onPl
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        val compact = isCompact()
+        // On a phone the filter buttons take half the screen, so they fold behind "Filtre".
+        var showFilters by rememberSaveable { mutableStateOf(false) }
+        WrapRow {
             OutlinedButton(onClick = viewModel::previous) { Text("◀") }
             Text(
                 text = when (state.mode) {
@@ -85,32 +90,30 @@ fun CalendarScreen(container: AppContainer, onOpen: (EpisodeEntry) -> Unit, onPl
                 },
                 style = MaterialTheme.typography.titleLarge,
                 maxLines = 1,
-                modifier = Modifier.width(380.dp),
+                modifier = if (compact) Modifier.padding(top = 8.dp) else Modifier.width(380.dp),
             )
             OutlinedButton(onClick = viewModel::next) { Text("▶") }
             OutlinedButton(onClick = viewModel::goToToday) { Text("Azi") }
             CalendarMode.entries.forEach { mode ->
                 NavButton(label = mode.label, selected = state.mode == mode, onClick = { viewModel.setMode(mode) })
             }
+            if (compact) NavButton(label = "Filtre", selected = showFilters, onClick = { showFilters = !showFilters })
         }
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            modifier = Modifier.padding(top = 8.dp),
-        ) {
-            NavButton(
-                label = if (state.onlyInstalledApps) "Doar aplicațiile mele ✓" else "Doar aplicațiile mele",
-                selected = state.onlyInstalledApps,
-                onClick = viewModel::toggleOnlyInstalledApps,
-            )
-            NavButton(
-                label = if (state.showRejected) "Arată și ce nu trece pragurile ✓" else "Arată și ce nu trece pragurile",
-                selected = state.showRejected,
-                onClick = viewModel::toggleShowRejected,
-            )
-            OutlinedButton(onClick = viewModel::reload) { Text("Reîncarcă") }
+        if (!compact || showFilters) {
+            WrapRow(modifier = Modifier.padding(top = 8.dp)) {
+                NavButton(
+                    label = if (state.onlyInstalledApps) "Doar aplicațiile mele ✓" else "Doar aplicațiile mele",
+                    selected = state.onlyInstalledApps,
+                    onClick = viewModel::toggleOnlyInstalledApps,
+                )
+                NavButton(
+                    label = if (state.showRejected) "Arată și ce nu trece pragurile ✓" else "Arată și ce nu trece pragurile",
+                    selected = state.showRejected,
+                    onClick = viewModel::toggleShowRejected,
+                )
+                OutlinedButton(onClick = viewModel::reload) { Text("Reîncarcă") }
+            }
         }
-
         when {
             state.missingKey -> InfoMessage(
                 "Lipsește cheia TMDB. Adaug-o în Setări sau la build (TMDB_API_KEY în local.properties).",

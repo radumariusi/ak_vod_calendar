@@ -11,7 +11,9 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
@@ -26,7 +28,9 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
-import androidx.tv.material3.OutlinedButton
+import com.ak.vodcalendar.ui.common.WrapRow
+import com.ak.vodcalendar.ui.common.isCompact
+import com.ak.vodcalendar.ui.touch.OutlinedButton
 import androidx.tv.material3.Text
 import coil3.compose.AsyncImage
 import androidx.compose.runtime.getValue
@@ -89,11 +93,11 @@ fun MovieDetailsScreen(
         }
         LazyColumn(contentPadding = PaddingValues(bottom = 48.dp)) {
             item {
-                Row(horizontalArrangement = Arrangement.spacedBy(32.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(if (isCompact()) 16.dp else 32.dp)) {
                     Box(
                         modifier = Modifier
-                            .width(200.dp)
-                            .height(300.dp)
+                            .width(if (isCompact()) 110.dp else 200.dp)
+                            .height(if (isCompact()) 165.dp else 300.dp)
                             .clip(RoundedCornerShape(8.dp))
                             .background(MaterialTheme.colorScheme.surfaceVariant),
                     ) {
@@ -130,7 +134,7 @@ fun MovieDetailsScreen(
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                         entry.overview?.takeIf { it.isNotBlank() }?.let {
-                            Text(it, style = MaterialTheme.typography.bodyMedium, maxLines = 5, overflow = TextOverflow.Ellipsis, modifier = Modifier.width(820.dp))
+                            Text(it, style = MaterialTheme.typography.bodyMedium, maxLines = 5, overflow = TextOverflow.Ellipsis, modifier = Modifier.widthIn(max = 820.dp).fillMaxWidth())
                         }
                         WatchSection(
                             ref = entry.toContentRef(),
@@ -142,10 +146,7 @@ fun MovieDetailsScreen(
                             container = container,
                             firstFocus = firstButton,
                         )
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(12.dp),
-                            modifier = Modifier.padding(top = 4.dp),
-                        ) {
+                        WrapRow(modifier = Modifier.padding(top = 4.dp)) {
                             videos.bestTrailer()?.let { trailer ->
                                 OutlinedButton(onClick = { openTrailer(context, trailer.key) }) { Text("▶ Trailer") }
                             }
@@ -190,5 +191,5 @@ private fun Section(title: String, body: String) {
     } else {
         Box(Modifier.padding(top = 16.dp))
     }
-    Text(body, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.width(900.dp))
+    Text(body, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.widthIn(max = 900.dp).fillMaxWidth())
 }
