@@ -60,6 +60,7 @@ class SettingsViewModel(private val repository: SettingsRepository) : ViewModel(
     fun unhideMovie(movieId: Int) = update { it.unhideMovie(movieId) }
 
     fun saveSimklClientId(id: String) = update { it.copy(simklClientId = id.trim()) }
+    fun saveWeTrakrClientId(id: String) = update { it.copy(wetrakrClientId = id.trim()) }
 
     fun setNotificationMode(mode: NotificationMode) = update { it.copy(notifications = it.notifications.copy(mode = mode)) }
 

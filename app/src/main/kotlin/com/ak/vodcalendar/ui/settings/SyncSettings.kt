@@ -53,7 +53,7 @@ import com.ak.vodcalendar.core.time.RomaniaTime
 private val notificationHours = listOf(7, 8, 9, 10, 12, 14, 16, 18, 20)
 private val syncTimeFormat = DateTimeFormatter.ofPattern("d MMM, HH:mm", Locale.forLanguageTag("ro"))
 
-/** Stage 5 settings: Simkl, notifications and the TV channel. */
+/** Stage 5 settings: Simkl, WeTrakr, notifications and the TV channel. */
 internal fun LazyListScope.syncSettings(settings: AppSettings, viewModel: SettingsViewModel, container: AppContainer) {
     item(key = "simkl-header") {
         SectionHeader(
@@ -73,6 +73,8 @@ internal fun LazyListScope.syncSettings(settings: AppSettings, viewModel: Settin
             onSave = viewModel::saveSimklClientId,
         )
     }
+
+    weTrakrSettings(settings, viewModel, container)
 
     item(key = "notify-header") {
         SectionHeader(
@@ -177,7 +179,7 @@ private fun NotificationSection(settings: AppSettings, viewModel: SettingsViewMo
                 Text(
                     when (n.mode) {
                         NotificationMode.OFF -> "Nicio notificare."
-                        NotificationMode.FOLLOWED -> "Câte una pentru fiecare serial / film urmărit (aici sau pe Simkl) care apare azi."
+                        NotificationMode.FOLLOWED -> "Câte una pentru fiecare serial / film urmărit (aici, pe Simkl sau pe WeTrakr) care apare azi."
                         NotificationMode.ALL -> "Câte una pentru ce urmărești, plus un rezumat cu tot calendarul zilei."
                     },
                 )

@@ -9,7 +9,7 @@ import com.ak.vodcalendar.core.today.TodayDigest
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
 
-/** Today's calendar (series + movies) in Romania time, minus what was watched on Simkl. */
+/** Today's calendar (series + movies) in Romania time, minus what was watched on Simkl / WeTrakr. */
 class TodayLoader(private val container: AppContainer) {
 
     /** Null when there is no TMDB key yet. Throws when TMDB can't be reached at all. */
@@ -39,7 +39,7 @@ class TodayLoader(private val container: AppContainer) {
         }
         if (episodes.isEmpty() && movies.isEmpty() && failure != null) throw failure
 
-        val account = container.simkl.store.current()
-        return TodayDigest.build(today, episodes, movies, account.watchedEpisodes, account.watchedMovies)
+        val watched = container.tracking.currentWatched()
+        return TodayDigest.build(today, episodes, movies, watched.episodes, watched.movies)
     }
 }
