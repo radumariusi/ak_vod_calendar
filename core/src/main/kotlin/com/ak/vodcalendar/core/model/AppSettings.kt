@@ -69,6 +69,12 @@ data class AppSettings(
     val simklShows: List<SavedShow> = emptyList(),
     /** Movies in the user's Simkl "Plan to watch" list (last sync); count as followed. */
     val simklMovies: List<SavedShow> = emptyList(),
+    /** Optional WeTrakr app key typed in Settings; overrides the one baked in at build time. */
+    val wetrakrClientId: String = "",
+    /** Series on the user's WeTrakr "watching" / "waiting" / "planning" lists (last sync); count as followed. */
+    val wetrakrShows: List<SavedShow> = emptyList(),
+    /** Movies on the user's WeTrakr "planning" list (last sync); count as followed. */
+    val wetrakrMovies: List<SavedShow> = emptyList(),
     /** Daily notification about what comes out today. */
     val notifications: NotificationSettings = NotificationSettings(),
     /** "Azi apare" channel on the Android TV home screen. */
@@ -88,6 +94,8 @@ data class AppSettings(
             hiddenMovies = hiddenMovies.distinctBy { it.id },
             simklShows = simklShows.distinctBy { it.id },
             simklMovies = simklMovies.distinctBy { it.id },
+            wetrakrShows = wetrakrShows.distinctBy { it.id },
+            wetrakrMovies = wetrakrMovies.distinctBy { it.id },
             notifications = notifications.copy(hour = notifications.hour.coerceIn(0, 23)),
         )
     }
@@ -99,15 +107,17 @@ data class AppSettings(
     fun updateApp(appId: String, transform: (UserStreamingApp) -> UserStreamingApp): AppSettings =
         copy(apps = apps.map { if (it.appId == appId) transform(it) else it })
 
-    /** Followed in the app, or on a Simkl list (unless hidden by hand). */
+    /** Followed in the app, or on a Simkl / WeTrakr list (unless hidden by hand). */
     fun isFollowed(showId: Int): Boolean =
-        followedShows.any { it.id == showId } || (simklShows.any { it.id == showId } && !isHidden(showId))
+        followedShows.any { it.id == showId } || (isFollowedOnSimkl(showId) && !isHidden(showId))
 
-    /** Shows always checked by the calendar: followed here plus the Simkl lists. */
+    /** Shows always checked by the calendar: followed here plus the Simkl and WeTrakr lists. */
     fun followedShowIds(): List<Int> =
-        (followedShows.map { it.id } + simklShows.map { it.id }.filterNot { isHidden(it) }).distinct()
+        (followedShows.map { it.id } + (simklShows + wetrakrShows).map { it.id }.filterNot { isHidden(it) }).distinct()
 
-    fun isFollowedOnSimkl(showId: Int): Boolean = simklShows.any { it.id == showId }
+    /** On a synced tracking list (Simkl or WeTrakr). */
+    fun isFollowedOnSimkl(showId: Int): Boolean =
+        simklShows.any { it.id == showId } || wetrakrShows.any { it.id == showId }
     fun isHidden(showId: Int): Boolean = hiddenShows.any { it.id == showId }
 
     /** Following a show un-hides it, and the other way round. */
@@ -118,6 +128,7 @@ data class AppSettings(
     fun unfollow(showId: Int): AppSettings = copy(
         followedShows = followedShows.filterNot { it.id == showId },
         simklShows = simklShows.filterNot { it.id == showId },
+        wetrakrShows = wetrakrShows.filterNot { it.id == showId },
     )
 
     fun hide(show: SavedShow): AppSettings =
@@ -126,10 +137,11 @@ data class AppSettings(
     fun unhide(showId: Int): AppSettings = copy(hiddenShows = hiddenShows.filterNot { it.id == showId })
 
     fun isMovieFollowed(movieId: Int): Boolean =
-        followedMovies.any { it.id == movieId } || (simklMovies.any { it.id == movieId } && !isMovieHidden(movieId))
+        followedMovies.any { it.id == movieId } ||
+            ((simklMovies + wetrakrMovies).any { it.id == movieId } && !isMovieHidden(movieId))
 
     fun followedMovieIds(): List<Int> =
-        (followedMovies.map { it.id } + simklMovies.map { it.id }.filterNot { isMovieHidden(it) }).distinct()
+        (followedMovies.map { it.id } + (simklMovies + wetrakrMovies).map { it.id }.filterNot { isMovieHidden(it) }).distinct()
     fun isMovieHidden(movieId: Int): Boolean = hiddenMovies.any { it.id == movieId }
 
     fun followMovie(movie: SavedShow): AppSettings = copy(
@@ -140,6 +152,7 @@ data class AppSettings(
     fun unfollowMovie(movieId: Int): AppSettings = copy(
         followedMovies = followedMovies.filterNot { it.id == movieId },
         simklMovies = simklMovies.filterNot { it.id == movieId },
+        wetrakrMovies = wetrakrMovies.filterNot { it.id == movieId },
     )
 
     fun hideMovie(movie: SavedShow): AppSettings = copy(

@@ -20,6 +20,9 @@ val omdbApiKey: String = secret("OMDB_API_KEY")
 // Simkl client id for the TV login. Not a secret: the PIN login uses no client secret, so the
 // app's id lives here. SIMKL_CLIENT_ID (local.properties / env) or the Settings field override it.
 val simklClientId: String = secret("SIMKL_CLIENT_ID").ifBlank { "13928167334cd394cf49855f3d190705cb94cb0ebb964dadd611b1a558ae2a93" }
+// WeTrakr app key (wetrakr.com Settings > API) for the TV login. Not a secret either: the device
+// login uses no client secret. WETRAKR_CLIENT_ID (local.properties / env) or the Settings field override it.
+val wetrakrClientId: String = secret("WETRAKR_CLIENT_ID").ifBlank { "" }
 
 // Version: the base changes per stage; CI release builds add the run number (BUILD_NUMBER),
 // so every published APK has a higher versionCode and installs over the previous one.
@@ -39,6 +42,7 @@ android {
         buildConfigField("String", "TMDB_API_KEY", "\"$tmdbApiKey\"")
         buildConfigField("String", "OMDB_API_KEY", "\"$omdbApiKey\"")
         buildConfigField("String", "SIMKL_CLIENT_ID", "\"$simklClientId\"")
+        buildConfigField("String", "WETRAKR_CLIENT_ID", "\"$wetrakrClientId\"")
         // GitHub repo whose latest release the in-app updater installs.
         buildConfigField("String", "UPDATE_REPO", "\"radumariusi/ak_vod_calendar\"")
     }

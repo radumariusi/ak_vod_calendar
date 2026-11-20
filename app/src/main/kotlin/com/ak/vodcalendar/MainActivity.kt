@@ -20,7 +20,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         val container = (application as AkApplication).container
         if (savedInstanceState == null) {
-            // Fresh "Azi apare" channel and Simkl lists (if older than an hour) on every start.
+            // Fresh "Azi apare" channel and Simkl / WeTrakr lists (if older than an hour) on every start.
             runCatching { TodayWorker.refreshNow(this) }
         }
         setContent {

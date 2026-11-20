@@ -161,7 +161,7 @@ private enum class SettingsCategory(val label: String) {
     FILTERS("Filtre de conținut"),
     SAVED("Urmărite și ascunse"),
     KEYS("Chei TMDB / OMDb"),
-    SYNC("Simkl, notificări, canal TV"),
+    SYNC("Simkl, WeTrakr, notificări, canal TV"),
     UPDATES("Actualizări"),
 }
 

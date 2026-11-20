@@ -14,6 +14,9 @@ import com.ak.vodcalendar.core.tmdb.TmdbHttpApi
 import com.ak.vodcalendar.data.DataStoreSettingsRepository
 import com.ak.vodcalendar.simkl.SimklManager
 import com.ak.vodcalendar.simkl.SimklStore
+import com.ak.vodcalendar.tracking.Tracking
+import com.ak.vodcalendar.wetrakr.WeTrakrManager
+import com.ak.vodcalendar.wetrakr.WeTrakrStore
 import com.ak.vodcalendar.today.TodayNotifier
 import com.ak.vodcalendar.today.TodayWorker
 import com.ak.vodcalendar.update.UpdateManager
@@ -42,7 +45,7 @@ class AkApplication : Application() {
         CoroutineScope(SupervisorJob() + Dispatchers.Default).launch {
             var first = true
             container.settingsRepository.settings
-                .map { Triple(it.notifications, it.tvChannel, it.simklShows.size + it.simklMovies.size) }
+                .map { Triple(it.notifications, it.tvChannel, it.simklShows.size + it.simklMovies.size + it.wetrakrShows.size + it.wetrakrMovies.size) }
                 .distinctUntilChanged()
                 .collect {
                     val settings = container.settingsRepository.settings.first()
@@ -76,6 +79,12 @@ class AppContainer(context: Context) {
 
     /** Simkl login, list sync and "văzut" marks. */
     val simkl = SimklManager(okHttp, settingsRepository, SimklStore(context.applicationContext))
+
+    /** WeTrakr login, list sync and "văzut" marks, next to Simkl. */
+    val wetrakr = WeTrakrManager(okHttp, settingsRepository, WeTrakrStore(context.applicationContext))
+
+    /** Simkl + WeTrakr together, for the "văzut" marks, follows and syncs. */
+    val tracking = Tracking(simkl, wetrakr)
 
     /** Netflix / Disney+ / Prime Video / Apple TV ids of a title, for "Deschide în …". */
     val streamingIds = WikidataClient(okHttp)

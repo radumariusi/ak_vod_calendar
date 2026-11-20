@@ -23,7 +23,7 @@ import java.util.concurrent.TimeUnit
 
 /**
  * Background work:
- * - "refresh" every 3 hours: Simkl sync (when stale) and the "Azi apare" TV channel;
+ * - "refresh" every 3 hours: Simkl / WeTrakr sync (when stale) and the "Azi apare" TV channel;
  * - "daily" once a day at the hour set in Settings (Romania time): the notifications,
  *   plus the same refresh.
  */
@@ -33,7 +33,7 @@ class TodayWorker(context: Context, params: WorkerParameters) : CoroutineWorker(
         val container = (applicationContext as AkApplication).container
         val notify = inputData.getBoolean(KEY_NOTIFY, false)
         return try {
-            container.simkl.sync(force = false, maxAgeMillis = 2 * 60 * 60 * 1000L)
+            container.tracking.sync(force = false, maxAgeMillis = 2 * 60 * 60 * 1000L)
             val settings = container.settingsRepository.settings.first()
             val digest = TodayLoader(container).load(settings)
             TodayChannel.update(applicationContext, digest, settings.tvChannel)
