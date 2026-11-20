@@ -17,9 +17,9 @@ fun secret(name: String): String = (localProps.getProperty(name) ?: System.geten
 val tmdbApiKey: String = secret("TMDB_API_KEY")
 // Optional OMDb key for IMDb ratings (OMDB_API_KEY), same rules as the TMDB key.
 val omdbApiKey: String = secret("OMDB_API_KEY")
-// Simkl client id for the TV login (SIMKL_CLIENT_ID). Not a secret: the PIN login uses no
-// client secret. The Settings field overrides it.
-val simklClientId: String = secret("SIMKL_CLIENT_ID")
+// Simkl client id for the TV login. Not a secret: the PIN login uses no client secret, so the
+// app's id lives here. SIMKL_CLIENT_ID (local.properties / env) or the Settings field override it.
+val simklClientId: String = secret("SIMKL_CLIENT_ID").ifBlank { "13928167334cd394cf49855f3d190705cb94cb0ebb964dadd611b1a558ae2a93" }
 
 // Version: the base changes per stage; CI release builds add the run number (BUILD_NUMBER),
 // so every published APK has a higher versionCode and installs over the previous one.

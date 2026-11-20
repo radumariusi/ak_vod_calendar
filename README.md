@@ -120,9 +120,9 @@ Fără Trakt. În **Setări → Simkl → Conectează Simkl** aplicația afișea
 Sincronizarea se face la login, la pornirea aplicației (dacă e mai veche de o oră), la câteva ore în fundal și din
 butonul **Sincronizează acum**. Se potrivește după id-ul TMDB; titlurile fără id TMDB pe Simkl sunt sărite.
 
-**Client ID**: Simkl cere un Client ID de aplicație (creat pe <https://simkl.com/settings/developer/new/>, Redirect URI
-`urn:ietf:wg:oauth:2.0:oob`). Login-ul cu cod nu folosește secretul, deci ID-ul nu e secret: se pune în
-`SIMKL_CLIENT_ID` (local.properties / env) la build, sau în Setări → Client ID Simkl.
+**Client ID**: aplicația are Client ID-ul ei Simkl (tip „TV app”) inclus în `app/build.gradle.kts`. Login-ul cu cod nu
+folosește secretul, deci ID-ul nu e secret. Se poate înlocui cu `SIMKL_CLIENT_ID` (local.properties / env) la build sau
+în Setări → Client ID Simkl.
 
 ## Notificări și canalul „Azi apare”
 
